@@ -1,0 +1,44 @@
+-------------------------------------------------------------------------------
+Test set: EngineServerImplTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 4, Skipped: 0, Time elapsed: 0.763 s <<< FAILURE! -- in EngineServerImplTest
+EngineServerImplTest.testHandleStatus_Success -- Time elapsed: 0.703 s <<< ERROR!
+java.lang.IllegalAccessException: class EngineServerImplTest cannot access a member of class api.EngineServerImpl with modifiers "protected"
+	at java.base/jdk.internal.reflect.Reflection.newIllegalAccessException(Reflection.java:394)
+	at java.base/java.lang.reflect.AccessibleObject.checkAccess(AccessibleObject.java:714)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:571)
+	at EngineServerImplTest.testHandleStatus_Success(EngineServerImplTest.java:81)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+EngineServerImplTest.testHandleStart_MethodNotAllowed -- Time elapsed: 0.010 s <<< ERROR!
+java.lang.IllegalAccessException: class EngineServerImplTest cannot access a member of class api.EngineServerImpl with modifiers "protected"
+	at java.base/jdk.internal.reflect.Reflection.newIllegalAccessException(Reflection.java:394)
+	at java.base/java.lang.reflect.AccessibleObject.checkAccess(AccessibleObject.java:714)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:571)
+	at EngineServerImplTest.testHandleStart_MethodNotAllowed(EngineServerImplTest.java:99)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+EngineServerImplTest.testHandleStart_Success -- Time elapsed: 0.010 s <<< ERROR!
+java.lang.IllegalAccessException: class EngineServerImplTest cannot access a member of class api.EngineServerImpl with modifiers "protected"
+	at java.base/jdk.internal.reflect.Reflection.newIllegalAccessException(Reflection.java:394)
+	at java.base/java.lang.reflect.AccessibleObject.checkAccess(AccessibleObject.java:714)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:571)
+	at EngineServerImplTest.testHandleStart_Success(EngineServerImplTest.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+EngineServerImplTest.testHandleComplete_Success -- Time elapsed: 0.002 s <<< ERROR!
+java.lang.IllegalAccessException: class EngineServerImplTest cannot access a member of class api.EngineServerImpl with modifiers "protected"
+	at java.base/jdk.internal.reflect.Reflection.newIllegalAccessException(Reflection.java:394)
+	at java.base/java.lang.reflect.AccessibleObject.checkAccess(AccessibleObject.java:714)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:571)
+	at EngineServerImplTest.testHandleComplete_Success(EngineServerImplTest.java:62)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

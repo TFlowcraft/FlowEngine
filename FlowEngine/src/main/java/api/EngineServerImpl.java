@@ -37,8 +37,7 @@ public class EngineServerImpl implements RequestService {
     }
 
     private void handleStart(HttpExchange exchange) throws IOException {
-        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-            sendResponse(exchange, 405, ResponseEntity.error("Method Not Allowed"));
+        if (!isMethodAllowed(exchange, Method.POST)) {
             return;
         }
 
@@ -53,8 +52,7 @@ public class EngineServerImpl implements RequestService {
     }
 
     private void handleComplete(HttpExchange exchange) throws IOException {
-        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-            sendResponse(exchange, 405, ResponseEntity.error("Method Not Allowed"));
+        if (!isMethodAllowed(exchange, Method.POST)) {
             return;
         }
 
@@ -68,10 +66,9 @@ public class EngineServerImpl implements RequestService {
     }
 
     private void handleStatus(HttpExchange exchange) throws IOException {
-        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            sendResponse(exchange, 405, ResponseEntity.error("Method Not Allowed"));
-            return;
-        }
+       if (!isMethodAllowed(exchange, Method.GET)) {
+           return;
+       }
 
         String query = exchange.getRequestURI().getQuery();
         if (query == null || !query.startsWith("processId=")) {
@@ -91,6 +88,15 @@ public class EngineServerImpl implements RequestService {
             return null;
         }
     }
+
+    private boolean isMethodAllowed(HttpExchange exchange, Method expectedMethod) throws IOException {
+        if (!expectedMethod.toString().equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, 405, ResponseEntity.error("Method Not Allowed"));
+            return false;
+        }
+        return true;
+    }
+
 
     private void sendResponse(HttpExchange exchange, int status, String response) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json");

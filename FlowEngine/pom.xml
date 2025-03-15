@@ -37,6 +37,19 @@
             <artifactId>mongodb-driver-sync</artifactId>
             <version>4.10.2</version>
         </dependency>
+        <!-- Swagger Core для создания спецификаций -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-core</artifactId>
+            <version>2.1.10</version>
+        </dependency>
+
+        <!-- Swagger UI для отображения документации -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>swagger-ui</artifactId>
+            <version>3.48.0</version>
+        </dependency>
     </dependencies>
 
 </project>

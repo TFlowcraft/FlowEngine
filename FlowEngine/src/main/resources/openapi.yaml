@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  title: Engine API
+  description: API для работы с движком BPM (Business Process Management)
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер
+paths:
+  /start:
+    post:
+      summary: Начать новый процесс
+      description: Запускает новый процесс с указанным processId.
+      operationId: startProcess
+      requestBody:
+        description: Данные для начала процесса
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                processId:
+                  type: string
+                  description: Уникальный идентификатор процесса
+              required:
+                - processId
+      responses:
+        '200':
+          description: Процесс успешно начат
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Process started"
+                  instanceId:
+                    type: string
+                    example: "instance-12345"
+        '400':
+          description: Некорректный запрос
+        '405':
+          description: Метод не разрешен
+
+  /complete:
+    post:
+      summary: Завершить задачу процесса
+      description: Завершает текущую задачу для указанного instanceId.
+      operationId: completeTask
+      requestBody:
+        description: Данные для завершения задачи
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                instanceId:
+                  type: string
+                  description: Уникальный идентификатор экземпляра процесса
+              required:
+                - instanceId
+      responses:
+        '200':
+          description: Задача успешно завершена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Task completed"
+                  instanceId:
+                    type: string
+                    example: "instance-12345"
+        '400':
+          description: Некорректный запрос
+        '405':
+          description: Метод не разрешен
+
+  /status:
+    get:
+      summary: Получить статус задачи процесса
+      description: Получает текущий статус задачи для указанного processId.
+      operationId: getStatus
+      parameters:
+        - name: processId
+          in: query
+          description: Уникальный идентификатор процесса
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Статус задачи успешно получен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instanceId:
+                    type: string
+                    example: "instance-12345"
+                  status:
+                    type: string
+                    example: "RUNNING"
+        '400':
+          description: Некорректный запрос
+        '405':
+          description: Метод не разрешен

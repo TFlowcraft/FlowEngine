@@ -5,22 +5,20 @@ import persistence.dao.DatabaseConnection;
 import persistence.entity.ProcessInstanceHistory;
 import persistence.mapper.ProcessInstanceHistoryMapper;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class ProcessInstanceHistoryDAO implements BaseDAO<ProcessInstanceHistory> {
-    private static final String INSERT_PROCESS_INSTANCE_HISTORY =
-            "INSERT INTO process_instance_history (id, process_instance_id, task_id, start_time, end_time) VALUES (?, ?, ?, ?, ?)";
-    private static final String FIND_PROCESS_INSTANCE_HISTORY_BY_ID =
-            "SELECT * FROM process_instance_history WHERE id = ?";
-    private static final String FIND_ALL_PROCESS_INSTANCE_HISTORY =
-            "SELECT * FROM process_instance_history";
-    private static final String UPDATE_PROCESS_INSTANCE_HISTORY =
-            "UPDATE process_instance_history SET process_instance_id = ?, task_id = ?, start_time = ?, end_time = ? WHERE id = ?";
-    private static final String DELETE_PROCESS_INSTANCE_HISTORY =
-            "DELETE FROM process_instance_history WHERE id = ?";
+    private static final String INSERT_PROCESS_INSTANCE_HISTORY = "INSERT INTO process_instance_history (id, process_instance_id, task_id, start_time, end_time) VALUES (?, ?, ?, ?, ?)";
+    private static final String FIND_PROCESS_INSTANCE_HISTORY_BY_ID = "SELECT * FROM process_instance_history WHERE id = ?";
+    private static final String FIND_ALL_PROCESS_INSTANCE_HISTORY = "SELECT * FROM process_instance_history";
+    private static final String UPDATE_PROCESS_INSTANCE_HISTORY = "UPDATE process_instance_history SET process_instance_id = ?, task_id = ?, start_time = ?, end_time = ? WHERE id = ?";
+    private static final String DELETE_PROCESS_INSTANCE_HISTORY = "DELETE FROM process_instance_history WHERE id = ?";
 
     @Override
     public void save(ProcessInstanceHistory history) throws SQLException {
@@ -30,7 +28,7 @@ public class ProcessInstanceHistoryDAO implements BaseDAO<ProcessInstanceHistory
             stmt.setObject(1, history.getId());
             stmt.setObject(2, history.getProcessInstanceId());
             stmt.setObject(3, history.getTaskId());
-            stmt.setTimestamp(4, Timestamp.valueOf(history.getTimestamp()));
+            stmt.setTimestamp(4, history.getTimestamp());
             stmt.executeUpdate();
         }
     }

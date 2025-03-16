@@ -12,7 +12,7 @@ public class ProcessInstanceHistoryMapper {
         history.setId(UUID.fromString(rs.getString("id")));
         history.setProcessInstanceId(UUID.fromString(rs.getString("process_instance_id")));
         history.setTaskId(UUID.fromString(rs.getString("task_id")));
-        history.setTimestamp(rs.getTimestamp("timestamp").toLocalDateTime());
+        history.setTimestamp(rs.getTimestamp("timestamp"));
         return history;
     }
 }

@@ -7,12 +7,13 @@ public class ProcessInstanceTask {
     private UUID id;
     private UUID processInstanceId;
     private UUID taskId;
+    private String description;
     private String status;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private UUID parentTaskId;
 
-    public ProcessInstanceTask(UUID id, UUID processInstanceId, UUID taskId, String status, LocalDateTime startTime, LocalDateTime endTime, UUID parentTaskId) {
+    public ProcessInstanceTask(UUID id, UUID processInstanceId, UUID taskId, String status, LocalDateTime startTime, LocalDateTime endTime, UUID parentTaskId, String description) {
         this.id = id;
         this.processInstanceId = processInstanceId;
         this.taskId = taskId;
@@ -20,6 +21,7 @@ public class ProcessInstanceTask {
         this.startTime = startTime;
         this.endTime = endTime;
         this.parentTaskId = parentTaskId;
+        this.description = description;
     }
 
     public ProcessInstanceTask() {
@@ -80,5 +82,13 @@ public class ProcessInstanceTask {
 
     public void setParentTaskId(UUID parentTaskId) {
         this.parentTaskId = parentTaskId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

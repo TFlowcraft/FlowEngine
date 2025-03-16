@@ -1,15 +1,15 @@
 package persistence.entity;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 public class ProcessInstanceHistory {
     private UUID id;
     private UUID processInstanceId;
     private UUID taskId;
-    private LocalDateTime timestamp;
+    private Timestamp timestamp;
 
-    public ProcessInstanceHistory(UUID id, UUID processInstanceId, UUID taskId, LocalDateTime timestamp) {
+    public ProcessInstanceHistory(UUID id, UUID processInstanceId, UUID taskId, Timestamp timestamp) {
         this.id = id;
         this.processInstanceId = processInstanceId;
         this.taskId = taskId;
@@ -44,11 +44,11 @@ public class ProcessInstanceHistory {
         this.taskId = taskId;
     }
 
-    public LocalDateTime getTimestamp() {
+    public Timestamp getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(LocalDateTime timestamp) {
+    public void setTimestamp(Timestamp timestamp) {
         this.timestamp = timestamp;
     }
 }

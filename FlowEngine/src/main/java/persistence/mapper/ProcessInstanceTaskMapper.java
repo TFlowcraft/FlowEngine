@@ -16,6 +16,7 @@ public class ProcessInstanceTaskMapper {
         task.setStartTime(rs.getTimestamp("start_time") != null ? rs.getTimestamp("start_time").toLocalDateTime() : null);
         task.setEndTime(rs.getTimestamp("end_time") != null ? rs.getTimestamp("end_time").toLocalDateTime() : null);
         task.setParentTaskId(rs.getString("parent_id") != null ? UUID.fromString(rs.getString("gateway_id")) : null);
+        task.setDescription(rs.getString("description") != null ? rs.getString("description") : null);
         return task;
     }
 }

@@ -9,7 +9,8 @@ public class Task {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 
-    public Task() {}
+    public Task() {
+    }
 
     public Task(UUID id, String name, LocalDateTime startTime, LocalDateTime endTime) {
         this.id = id;

@@ -1,0 +1,61 @@
+plugins {
+    id 'java'
+    id 'nu.studer.jooq' version '9.0'
+}
+
+group = 'com.tbank'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.jooq:jooq:3.18.7'
+    implementation 'org.jooq:jooq-meta:3.18.7'
+    implementation 'org.jooq:jooq-codegen:3.18.7'
+    implementation 'org.postgresql:postgresql:42.7.3' // Обновлено до последней версии
+    jooqGenerator 'org.postgresql:postgresql:42.7.3'  // Обновлено до последней версии
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+// Настройка jOOQ
+jooq {
+    configurations {
+        main {
+            generationTool {
+                jdbc {
+                    driver = System.getenv('DB_DRIVER') ?: 'org.postgresql.Driver'
+                    url = System.getenv('DB_URL') ?: 'jdbc:postgresql://localhost:5432/your_database'
+                    user = System.getenv('DB_USER') ?: 'your_username'
+                    password = System.getenv('DB_PASSWORD') ?: 'your_password'
+                }
+                generator {
+                    name = 'org.jooq.codegen.JavaGenerator'
+                    database {
+                        name = 'org.jooq.meta.postgres.PostgresDatabase'
+                        inputSchema = 'public'
+                    }
+                    generate {
+                        relations = true
+                        deprecated = false
+                        records = true
+                        immutablePojos = true
+                        fluentSetters = true
+                    }
+                    target {
+                        packageName = 'com.database.entity.generated'
+                        directory = 'src/main/java'
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Настройка тестов
+test {
+    useJUnitPlatform()
+}

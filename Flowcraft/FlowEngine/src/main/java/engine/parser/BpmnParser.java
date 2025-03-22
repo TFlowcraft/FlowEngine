@@ -104,7 +104,7 @@ public final class BpmnParser {
         List<String> references = new ArrayList<>(flowIds.size());
         flowIds.forEach(flowId -> {
             FlowInfo flow = flowMap.get(flowId);
-            if (flow != null) references.add(direction == Direction.TARGET ? flow.getTargetRef() : flow.getSourceRef());
+            if (flow != null) references.add(direction == Direction.TARGET ? flow.targetRef() : flow.sourceRef());
         });
         return Collections.unmodifiableList(references);
     }

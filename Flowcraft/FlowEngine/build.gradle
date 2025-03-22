@@ -11,9 +11,9 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.jooq:jooq:3.18.7'
-    implementation 'org.jooq:jooq-meta:3.18.7'
-    implementation 'org.jooq:jooq-codegen:3.18.7'
+    implementation 'org.jooq:jooq:3.20.2'
+    implementation 'org.jooq:jooq-meta:3.20.2'
+    implementation 'org.jooq:jooq-codegen:3.20.2'
     implementation 'org.postgresql:postgresql:42.7.3' // Обновлено до последней версии
     jooqGenerator 'org.postgresql:postgresql:42.7.3'  // Обновлено до последней версии
 
@@ -28,9 +28,9 @@ jooq {
             generationTool {
                 jdbc {
                     driver = System.getenv('DB_DRIVER') ?: 'org.postgresql.Driver'
-                    url = System.getenv('DB_URL') ?: 'jdbc:postgresql://localhost:5432/your_database'
-                    user = System.getenv('DB_USER') ?: 'your_username'
-                    password = System.getenv('DB_PASSWORD') ?: 'your_password'
+                    url = System.getenv('DB_URL') ?: 'jdbc:postgresql://localhost:5432/process_engine'
+                    user = System.getenv('DB_USER') ?: 'postgres'
+                    password = System.getenv('DB_PASSWORD') ?: 'postgres'
                 }
                 generator {
                     name = 'org.jooq.codegen.JavaGenerator'
@@ -47,7 +47,7 @@ jooq {
                     }
                     target {
                         packageName = 'com.database.entity.generated'
-                        directory = 'src/main/java'
+                        directory = 'src/generated/java'
                     }
                 }
             }

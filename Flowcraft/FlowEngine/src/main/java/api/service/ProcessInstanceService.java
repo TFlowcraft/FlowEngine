@@ -1,4 +1,4 @@
-package api.service.impl;
+package api.service;
 
 public class ProcessInstanceService {
 }

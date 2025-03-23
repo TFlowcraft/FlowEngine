@@ -7,48 +7,48 @@ servers:
   - url: http://localhost:8080
     description: Local development server
 paths:
-  /workflow/info:
-    get:
-      summary: Workflow info
-      description: Return info about workflow
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  name:
-                    type: string
-                    example: "Order Processing Workflow"
+#  /workflow/info:
+#    get:
+#      summary: Workflow info
+#      description: Return info about workflow
+#      responses:
+#        '200':
+#          description: OK
+#          content:
+#            application/json:
+#              schema:
+#                type: object
+#                properties:
+#                  id:
+#                    type: string
+#                    format: uuid
+#                    example: "550e8400-e29b-41d4-a716-446655440000"
+#                  name:
+#                    type: string
+#                    example: "Order Processing Workflow"
 #                  status:
 #                    type: string
 #                    example: "ACTIVE"
-        '404':
-          description: Workflow not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Workflow not found"
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "An internal server error occurred"
+#        '404':
+#          description: Workflow not found
+#          content:
+#            application/json:
+#              schema:
+#                type: object
+#                properties:
+#                  message:
+#                    type: string
+#                    example: "Workflow not found"
+#        '500':
+#          description: Internal Server Error
+#          content:
+#            application/json:
+#              schema:
+#                type: object
+#                properties:
+#                  message:
+#                    type: string
+#                    example: "An internal server error occurred"
 
   /workflow/diagram:
     get:
@@ -84,7 +84,7 @@ paths:
                     type: string
                     example: "An internal server error occurred"
 
-  /processInstance/single:
+  /processInstance/single/{id}:
     get:
       summary: Process instance info
       description: Return info about a specific process instance
@@ -191,7 +191,7 @@ paths:
                     type: string
                     example: "An internal server error occurred"
 
-  /history/task:
+  /history/task/{id}:
     get:
       summary: Task history info
       description: Return history info about a specific task
@@ -262,7 +262,7 @@ paths:
                     type: string
                     example: "An internal server error occurred"
 
-  /timeline/task:
+  /timeline/task/{id}:
     get:
       summary: Task timeline info
       description: Return timeline info about a specific task

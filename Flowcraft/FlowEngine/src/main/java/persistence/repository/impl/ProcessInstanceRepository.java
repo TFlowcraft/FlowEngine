@@ -3,6 +3,7 @@ package persistence.repository.impl;
 import com.database.entity.generated.tables.ProcessInstance;
 import com.database.entity.generated.tables.records.ProcessInstanceRecord;
 import org.jooq.DSLContext;
+import persistence.DatabaseConfig;
 import persistence.repository.BaseRepository;
 
 import java.util.List;
@@ -11,8 +12,8 @@ import java.util.UUID;
 public class ProcessInstanceRepository implements BaseRepository<ProcessInstanceRecord> {
     private final DSLContext context;
 
-    public ProcessInstanceRepository(DSLContext context) {
-        this.context = context;
+    public ProcessInstanceRepository() {
+        this.context = DatabaseConfig.getContext();
     }
 
     @Override
@@ -22,6 +23,7 @@ public class ProcessInstanceRepository implements BaseRepository<ProcessInstance
 
     @Override
     public ProcessInstanceRecord getById(UUID id) {
+
         return context
                 .selectFrom(ProcessInstance.PROCESS_INSTANCE)
                 .where(ProcessInstance.PROCESS_INSTANCE.ID.eq(id))
@@ -45,4 +47,6 @@ public class ProcessInstanceRepository implements BaseRepository<ProcessInstance
     public void update(ProcessInstanceRecord record) {
         record.update();
     }
+
+
 }

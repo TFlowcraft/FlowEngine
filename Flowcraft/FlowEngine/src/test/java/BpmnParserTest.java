@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BpmnParserTest {
 
-    private static final String TEST_BPMN_FILE = "C:\\Users\\degl\\Documents\\GitHub\\Flowcraft\\FlowEngine\\src\\test\\resources\\test.bpmn";
+    private static final String TEST_BPMN_FILE = "test.bpmn";
     private Map<String, BpmnElement> parsedElements;
 
 

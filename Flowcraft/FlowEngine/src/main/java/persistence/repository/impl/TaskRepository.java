@@ -1,9 +1,12 @@
 package persistence.repository.impl;
 
 import com.database.entity.generated.tables.InstanceTasks;
+
 import com.database.entity.generated.tables.records.InstanceTasksRecord;
 import org.jooq.DSLContext;
+import persistence.DatabaseConfig;
 import persistence.repository.BaseRepository;
+import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 
 import java.util.List;
 import java.util.UUID;
@@ -11,8 +14,8 @@ import java.util.UUID;
 public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
     private final DSLContext context;
 
-    public TaskRepository(DSLContext context) {
-        this.context = context;
+    public TaskRepository() {
+        this.context = DatabaseConfig.getContext();
     }
 
     @Override
@@ -44,5 +47,15 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
     @Override
     public void update(InstanceTasksRecord record) {
         record.update();
+    }
+
+    public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int limit) {
+        return context.update(INSTANCE_TASKS)
+                .set(INSTANCE_TASKS.STATUS, "IN_PROGRESS")
+                .where(INSTANCE_TASKS.STATUS.eq("PENDING"))
+                .orderBy(INSTANCE_TASKS.START_TIME.asc())
+                .limit(limit)
+                .returning()
+                .fetchInto(com.database.entity.generated.tables.pojos.InstanceTasks.class);
     }
 }

@@ -3,6 +3,7 @@ package persistence.repository.impl;
 import com.database.entity.generated.tables.InstanceHistory;
 import com.database.entity.generated.tables.records.InstanceHistoryRecord;
 import org.jooq.DSLContext;
+import persistence.DatabaseConfig;
 import persistence.repository.BaseRepository;
 
 import java.util.List;
@@ -11,8 +12,8 @@ import java.util.UUID;
 public class HistoryRepository implements BaseRepository<InstanceHistoryRecord> {
     private final DSLContext context;
 
-    public HistoryRepository(DSLContext context) {
-        this.context = context;
+    public HistoryRepository() {
+        this.context = DatabaseConfig.getContext();
     }
 
     @Override

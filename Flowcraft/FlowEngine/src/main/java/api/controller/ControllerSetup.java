@@ -2,6 +2,6 @@ package api.controller;
 
 import io.javalin.Javalin;
 
-public interface ControllerEndpoinsSetup {
+public interface ControllerSetup {
     void registerEndpoints(Javalin app);
 }

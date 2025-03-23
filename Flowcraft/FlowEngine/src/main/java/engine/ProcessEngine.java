@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ProcessEngine {
+    //Тут поллер, воркеры, очередь и тд + обработчики элементов?
     private final Map<String, BpmnElement> bpmnProcess;
     private final List<TaskDelegate> userTaskImplementation;
 

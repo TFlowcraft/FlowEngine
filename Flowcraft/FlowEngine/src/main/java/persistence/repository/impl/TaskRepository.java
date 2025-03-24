@@ -49,12 +49,19 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
         record.update();
     }
 
-    public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int limit) {
-        return context.update(INSTANCE_TASKS)
+    public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int batchSize) {
+        return context
+                .update(INSTANCE_TASKS)
                 .set(INSTANCE_TASKS.STATUS, "IN_PROGRESS")
-                .where(INSTANCE_TASKS.STATUS.eq("PENDING"))
-                .orderBy(INSTANCE_TASKS.START_TIME.asc())
-                .limit(limit)
+                .where(INSTANCE_TASKS.ID.in(
+                        context
+                                .select(InstanceTasks.INSTANCE_TASKS.ID)
+                                .from(INSTANCE_TASKS)
+                                .where(INSTANCE_TASKS.STATUS.eq("PENDING"))
+                                .orderBy(INSTANCE_TASKS.START_TIME.asc())
+                                .limit(batchSize)
+                                .forUpdate().skipLocked()
+                ))
                 .returning()
                 .fetchInto(com.database.entity.generated.tables.pojos.InstanceTasks.class);
     }

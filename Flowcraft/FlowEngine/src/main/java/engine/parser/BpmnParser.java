@@ -14,6 +14,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,11 +33,11 @@ public final class BpmnParser {
         SOURCE, TARGET
     }
 
-    public static Map<String, BpmnElement> parseFile(String path) throws ParserConfigurationException, IOException, org.xml.sax.SAXException {
+    public static Map<String, BpmnElement> parseFile(InputStream inputStream) throws ParserConfigurationException, IOException, org.xml.sax.SAXException {
         Map<String, BpmnElement> elementMap = new HashMap<>();
         Map<String, FlowInfo> flowMap = new HashMap<>();
 
-        Document document = initializeDocumentBuilder().parse(new File(path));
+        Document document = initializeDocumentBuilder().parse(inputStream);
         document.getDocumentElement().normalize();
 
         NodeList elementsNodeList = document.getElementsByTagName("*");

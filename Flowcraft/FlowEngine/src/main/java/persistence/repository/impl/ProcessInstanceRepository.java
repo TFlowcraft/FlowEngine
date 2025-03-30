@@ -3,8 +3,8 @@ package persistence.repository.impl;
 import com.database.entity.generated.tables.ProcessInstance;
 import com.database.entity.generated.tables.records.ProcessInstanceRecord;
 import org.jooq.DSLContext;
-import org.jooq.JSON;
 import org.jooq.JSONB;
+import org.jooq.impl.QOM;
 import persistence.DatabaseConfig;
 import persistence.repository.BaseRepository;
 
@@ -52,10 +52,11 @@ public class ProcessInstanceRepository implements BaseRepository<ProcessInstance
     }
 
 
-    public void createNew(JSONB businessData) {
-        ProcessInstanceRecord record = new ProcessInstanceRecord();
+    public UUID createNew(JSONB businessData) {
+        ProcessInstanceRecord record = context.newRecord(ProcessInstance.PROCESS_INSTANCE);
         record.setBusinessData(businessData);
         record.setStartedAt(OffsetDateTime.now());
         record.store();
+        return record.getId();
     }
 }

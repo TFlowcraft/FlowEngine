@@ -25,4 +25,10 @@ public class TaskService  {
                 .map(record -> record.into(InstanceTasks.class))
                 .collect(Collectors.toList());
     }
+
+    public List<InstanceTasks> getAllTasks() {
+        return taskRepository.getAll().stream()
+                .map(record -> record.into(InstanceTasks.class))
+                .collect(Collectors.toList());
+    }
 }

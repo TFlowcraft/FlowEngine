@@ -7,7 +7,7 @@ import io.javalin.http.Context;
 public class WorkflowController implements ControllerSetup {
     @Override
     public void registerEndpoints(Javalin app) {
-        app.get("/workflow/diagram", this::getWorkflow);
+        app.get("/process/{processName}/diagram", this::getWorkflow);
     }
 
     private void getWorkflow(Context ctx) {

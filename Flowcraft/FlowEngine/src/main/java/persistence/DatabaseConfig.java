@@ -2,6 +2,7 @@ package persistence;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
@@ -15,10 +16,14 @@ public class DatabaseConfig {
     private static final HikariDataSource dataSource;
 
     static {
+        Dotenv dotenv = Dotenv.load();
+        String jdbcUrl = dotenv.get("DB_URL");
+        String jdbcUser = dotenv.get("DB_USER");
+        String jdbcPassword = dotenv.get("DB_PASSWORD");
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(System.getenv("DB_URL"));
-        config.setUsername(System.getenv("DB_USER"));
-        config.setPassword(System.getenv("DB_PASSWORD"));
+        config.setJdbcUrl(jdbcUrl);
+        config.setUsername(jdbcUser);
+        config.setPassword(jdbcPassword);
         config.setMaximumPoolSize(POOL_SIZE);
         config.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
         config.setIdleTimeout(IDLE_TIMEOUT_MS);

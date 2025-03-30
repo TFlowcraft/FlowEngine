@@ -52,7 +52,7 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
     public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int batchSize) {
         return context
                 .update(INSTANCE_TASKS)
-                .set(INSTANCE_TASKS.STATUS, "IN_PROGRESS")
+                .set(INSTANCE_TASKS.STATUS, "RUNNING")
                 .where(INSTANCE_TASKS.ID.in(
                         context
                                 .select(InstanceTasks.INSTANCE_TASKS.ID)
@@ -64,5 +64,25 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
                 ))
                 .returning()
                 .fetchInto(com.database.entity.generated.tables.pojos.InstanceTasks.class);
+    }
+
+    public void createTaskForInstance(UUID id, String elementId) {
+        InstanceTasksRecord record = context.newRecord(INSTANCE_TASKS);
+        record.setInstanceId(id);
+        record.setBpmnElementId(elementId);
+        record.setStatus("PENDING");
+        record.setCurrentRetriesAmount(0);
+        record.store();
+    }
+
+    public void updateTask(com.database.entity.generated.tables.pojos.InstanceTasks newTask) {
+        context.update(INSTANCE_TASKS)
+                .set(INSTANCE_TASKS.STATUS, newTask.getStatus())
+                .set(INSTANCE_TASKS.START_TIME, newTask.getStartTime())
+                .set(INSTANCE_TASKS.END_TIME, newTask.getEndTime())
+                .set(INSTANCE_TASKS.CURRENT_RETRIES_AMOUNT, newTask.getCurrentRetriesAmount())
+                .where(INSTANCE_TASKS.ID.eq(newTask.getId()))
+                .execute();
+
     }
 }

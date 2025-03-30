@@ -17,8 +17,8 @@ public class ProcessInstanceController implements ControllerSetup {
 
     @Override
     public void registerEndpoints(Javalin app) {
-        app.get("/processInstance/single/:id", this::getSingleProcessInstance);
-        app.get("/processInstance/all", this::getAllProcessInstances);
+        app.get("/process/{processName}/instance/:id", this::getSingleProcessInstance);
+        app.get("/process/:processName/instance/all", this::getAllProcessInstances);
     }
 
     private void getSingleProcessInstance(Context ctx) {

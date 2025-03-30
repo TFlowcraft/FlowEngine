@@ -16,7 +16,7 @@ CREATE INDEX idx_process_instance_business_data ON process_instance USING GIN (b
 CREATE TABLE instance_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     instance_id UUID REFERENCES process_instance(id) ON DELETE CASCADE,
-    bpmn_element_id UUID,
+    bpmn_element_id VARCHAR(255),
     status VARCHAR(50) CHECK (status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')),
     start_time TIMESTAMPTZ,
     end_time TIMESTAMPTZ,
@@ -60,8 +60,24 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Функция вставки лога
+CREATE OR REPLACE FUNCTION log_task_creation()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO instance_history (instance_id, task_id, task_status, timestamp)
+    VALUES (NEW.instance_id, NEW.id, NEW.status, NOW());
+RETURN NEW;
+END;
+$$  LANGUAGE  plpgsql;
+
 -- Триггер логирования изменений статуса
 CREATE TRIGGER trigger_log_task_status_change
     AFTER UPDATE ON instance_tasks
     FOR EACH ROW
     EXECUTE FUNCTION log_task_status_change();
+
+-- Логирование при создании таски
+CREATE TRIGGER trigger_log_task_creation
+    AFTER INSERT ON instance_tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION log_task_creation();

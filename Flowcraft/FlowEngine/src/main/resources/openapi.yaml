@@ -6,85 +6,96 @@ info:
 servers:
   - url: http://localhost:8080
     description: Local development server
-paths:
-#  /workflow/info:
-#    get:
-#      summary: Workflow info
-#      description: Return info about workflow
-#      responses:
-#        '200':
-#          description: OK
-#          content:
-#            application/json:
-#              schema:
-#                type: object
-#                properties:
-#                  id:
-#                    type: string
-#                    format: uuid
-#                    example: "550e8400-e29b-41d4-a716-446655440000"
-#                  name:
-#                    type: string
-#                    example: "Order Processing Workflow"
-#                  status:
-#                    type: string
-#                    example: "ACTIVE"
-#        '404':
-#          description: Workflow not found
-#          content:
-#            application/json:
-#              schema:
-#                type: object
-#                properties:
-#                  message:
-#                    type: string
-#                    example: "Workflow not found"
-#        '500':
-#          description: Internal Server Error
-#          content:
-#            application/json:
-#              schema:
-#                type: object
-#                properties:
-#                  message:
-#                    type: string
-#                    example: "An internal server error occurred"
 
-  /workflow/diagram:
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    ProcessInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        businessData:
+          type: object
+          example: {"orderId": 123, "customer": "John Doe"}
+        startTime:
+          type: string
+          format: date-time
+          example: "2023-10-01T12:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          example: "2023-10-01T13:00:00Z"
+
+    TaskHistory:
+      type: object
+      properties:
+        instanceId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        taskStatus:
+          type: string
+          example: "COMPLETED"
+        taskId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        taskStartTime:
+          type: string
+          format: date-time
+          example: "2023-10-01T12:00:00Z"
+        taskEndTime:
+          type: string
+          format: date-time
+          example: "2023-10-01T13:00:00Z"
+
+paths:
+  /process/{processName}/diagram:
     get:
       summary: Workflow diagram
       description: Return workflow diagram in .bpmn format
+      parameters:
+        - name: processName
+          in: path
+          description: ID of the process instance
+          required: true
+          schema:
+            type: string
+            example: "businessProcess1"
       responses:
         '200':
           description: OK
           content:
-            text/plain:
+            application/xml:
               schema:
                 type: string
-                format: binary
-                example: "<bpmn:definitions ...></bpmn:definitions>"
+                example: |
+                  <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+
+                  </bpmn:definitions>
         '404':
           description: Diagram not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Diagram not found"
+                $ref: "#/components/schemas/ErrorResponse"
         '500':
           description: Internal Server Error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "An internal server error occurred"
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /processInstance/single/{id}:
+  /process/{processName}/instance/{id}:
     get:
       summary: Process instance info
       description: Return info about a specific process instance
@@ -103,55 +114,27 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  businessData:
-                    type: object
-                    example: {"orderId": 123, "customer": "John Doe"}
-                  startTime:
-                    type: string
-                    format: date-time
-                    example: "2023-10-01T12:00:00Z"
-                  endTime:
-                    type: string
-                    format: date-time
-                    example: "2023-10-01T13:00:00Z"
+                $ref: "#/components/schemas/ProcessInstance"
         '400':
           description: Invalid UUID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Invalid UUID format"
+                $ref: "#/components/schemas/ErrorResponse"
         '404':
           description: Process instance not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Process instance not found"
+                $ref: "#/components/schemas/ErrorResponse"
         '500':
           description: Internal Server Error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "An internal server error occurred"
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /processInstance/all:
+  /process/{processName}/instance/all:
     get:
       summary: Process instances info
       description: Return info about all process instances
@@ -163,40 +146,28 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      format: uuid
-                      example: "550e8400-e29b-41d4-a716-446655440000"
-                    businessData:
-                      type: object
-                      example: {"orderId": 123, "customer": "John Doe"}
-                    startTime:
-                      type: string
-                      format: date-time
-                      example: "2023-10-01T12:00:00Z"
-                    endTime:
-                      type: string
-                      format: date-time
-                      example: "2023-10-01T13:00:00Z"
+                  $ref: "#/components/schemas/ProcessInstance"
         '500':
           description: Internal Server Error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "An internal server error occurred"
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /history/task/{id}:
+  /process/{processName}/instance/{instanceId}/task/history/{taskId}:
     get:
       summary: Task history info
       description: Return history info about a specific task
       parameters:
-        - name: id
+        - name: instanceId
+          in: path
+          description: Process instance ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: taskId
           in: path
           description: Task ID
           required: true
@@ -210,66 +181,34 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    format: uuid
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  taskStatus:
-                    type: string
-                    example: "COMPLETED"
-                  taskId:
-                    type: string
-                    format: uuid
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  taskStartTime:
-                    type: string
-                    format: date-time
-                    example: "2023-10-01T12:00:00Z"
-                  taskEndTime:
-                    type: string
-                    format: date-time
-                    example: "2023-10-01T13:00:00Z"
+                $ref: "#/components/schemas/TaskHistory"
         '400':
           description: Invalid UUID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Invalid UUID format"
+                $ref: "#/components/schemas/ErrorResponse"
         '404':
           description: Task not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Task not found"
+                $ref: "#/components/schemas/ErrorResponse"
         '500':
           description: Internal Server Error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "An internal server error occurred"
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /timeline/task/{id}:
+  /process/{processName}/instance/{instanceId}/task/history/all:
     get:
       summary: Task timeline info
-      description: Return timeline info about a specific task
+      description: Return timeline info about all tasks
       parameters:
-        - name: id
+        - name: instanceId
           in: path
-          description: Task ID
+          description: Process instance ID
           required: true
           schema:
             type: string
@@ -281,54 +220,24 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  instanceId:
-                    type: string
-                    format: uuid
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  taskStatus:
-                    type: string
-                    example: "COMPLETED"
-                  taskId:
-                    type: string
-                    format: uuid
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  taskStartTime:
-                    type: string
-                    format: date-time
-                    example: "2023-10-01T12:00:00Z"
-                  taskEndTime:
-                    type: string
-                    format: date-time
-                    example: "2023-10-01T13:00:00Z"
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskHistory"
         '400':
           description: Invalid UUID format
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Invalid UUID format"
+                $ref: "#/components/schemas/ErrorResponse"
         '404':
-          description: Task not found
+          description: Instance not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Task not found"
+                $ref: "#/components/schemas/ErrorResponse"
         '500':
           description: Internal Server Error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "An internal server error occurred"
+                $ref: "#/components/schemas/ErrorResponse"

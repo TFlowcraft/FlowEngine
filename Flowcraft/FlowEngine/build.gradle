@@ -17,6 +17,7 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.3'
     implementation 'com.zaxxer:HikariCP:5.0.1'
     implementation 'io.javalin:javalin:6.5.0'
+    implementation 'io.github.cdimascio:dotenv-java:2.2.0'
 
     jooqGenerator 'org.postgresql:postgresql:42.7.3'
 
@@ -24,16 +25,16 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
-// Настройка jOOQ
+// jOOQ job
 jooq {
     configurations {
         main {
             generationTool {
                 jdbc {
                     driver = 'org.postgresql.Driver'
-                    url = System.getenv('DB_URL') ?: 'jdbc:postgresql://localhost:5432/process_engine'
-                    user = System.getenv('DB_USER') ?: 'postgres'
-                    password = System.getenv('DB_PASSWORD') ?: 'postgres'
+                    url = 'jdbc:postgresql://localhost:5432/process_engine'
+                    user = 'postgres'
+                    password = 'postgres'
                 }
                 generator {
                     name = 'org.jooq.codegen.JavaGenerator'
@@ -50,7 +51,7 @@ jooq {
                     }
                     target {
                         packageName = 'com.database.entity.generated'
-                        directory = 'src/generated/java'
+                        directory = 'build/generated-sources/jooq'
                     }
                 }
             }
@@ -58,6 +59,13 @@ jooq {
     }
 }
 
+//sourceSets {
+//    main {
+//        java {
+//            srcDirs('build/generated-sources/jooq')
+//        }
+//    }
+//}
 // Настройка тестов
 test {
     useJUnitPlatform()

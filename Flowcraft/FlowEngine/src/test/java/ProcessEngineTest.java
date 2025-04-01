@@ -1,10 +1,9 @@
-import api.service.ProcessInstanceService;
 import api.service.TaskService;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.ProcessEngine;
-import engine.TaskDelegate;
+import engine.common.TaskDelegate;
+import engine.model.ExecutionContext;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import persistence.poller.ProcessPoller;
@@ -56,12 +55,12 @@ public class ProcessEngineTest {
             int finalI = i;
             taskDelegates.add(new TaskDelegate() {
                 @Override
-                public void execute(String businessData) {
+                public void execute(ExecutionContext context) {
                     System.out.printf("Executing task %d \n", finalI);
                 }
 
                 @Override
-                public void rollback() {
+                public void rollback(ExecutionContext context) {
                     System.out.printf("Rollback task %d \n", finalI);
                 }
             });

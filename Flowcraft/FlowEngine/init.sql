@@ -1,12 +1,20 @@
 -- pgcrypto для генерации UUID
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+CREATE TABLE process_info (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    bpmn_process_id VARCHAR(255),
+    processName VARCHAR(100)
+);
+
+
 -- process_instance
 CREATE TABLE process_instance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     business_data JSONB,
     started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ
+    completed_at TIMESTAMPTZ,
+    process_id UUID REFERENCES process_info(id) ON DELETE CASCADE
 );
 
 -- GIN индекс на business_data
@@ -36,6 +44,7 @@ CREATE TABLE instance_history (
     error_stacktrace JSONB,
     timestamp TIMESTAMPTZ
 );
+
 
 -- Индексы instance_history
 CREATE INDEX idx_instance_history_instance_id ON instance_history (instance_id);

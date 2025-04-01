@@ -19,17 +19,21 @@ dependencies {
     implementation 'io.javalin:javalin:6.5.0'
     implementation 'io.github.cdimascio:dotenv-java:2.2.0'
 
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.18.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
+
     jooqGenerator 'org.postgresql:postgresql:42.7.3'
 
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
-// jOOQ job
 jooq {
     configurations {
         main {
             generationTool {
+                logging = org.jooq.meta.jaxb.Logging.WARN
                 jdbc {
                     driver = 'org.postgresql.Driver'
                     url = 'jdbc:postgresql://localhost:5432/process_engine'
@@ -51,7 +55,7 @@ jooq {
                     }
                     target {
                         packageName = 'com.database.entity.generated'
-                        directory = 'build/generated-sources/jooq'
+                        directory = layout.buildDirectory.dir("generated/jooq").get().asFile.absolutePath
                     }
                 }
             }
@@ -59,14 +63,18 @@ jooq {
     }
 }
 
-//sourceSets {
-//    main {
-//        java {
-//            srcDirs('build/generated-sources/jooq')
-//        }
-//    }
-//}
-// Настройка тестов
+sourceSets {
+    main {
+        java {
+            srcDirs += layout.buildDirectory.dir("generated/jooq").get().asFile
+        }
+    }
+}
+
+tasks.named("compileJava").configure {
+    dependsOn("jooqGenerate")
+}
+
 test {
     useJUnitPlatform()
 }

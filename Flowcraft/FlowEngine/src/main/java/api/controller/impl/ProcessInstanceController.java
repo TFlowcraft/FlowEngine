@@ -17,22 +17,36 @@ public class ProcessInstanceController implements ControllerSetup {
 
     @Override
     public void registerEndpoints(Javalin app) {
-        app.get("/process/{processName}/instance/:id", this::getSingleProcessInstance);
-        app.get("/process/:processName/instance/all", this::getAllProcessInstances);
+        app.get("/process/{processName}/instance/{id}", this::getProcessInstanceById);
+        app.get("/process/{processName}/instance/all", this::getAllProcessInstances);
+        app.get("/process/{processName}/diagram", this::getProcessDiagram);
     }
 
-    private void getSingleProcessInstance(Context ctx) {
-        UUID id = UUID.fromString(ctx.pathParam("id"));
-        var instance = processInstanceService.getProcessInstance(id);
-        if (instance == null) {
-            Response.notFound(ctx);
-        } else {
+    private void getProcessInstanceById(Context ctx) {
+        try {
+            String processName = ctx.pathParam("processName");
+            UUID id = UUID.fromString(ctx.pathParam("id"));
+
+            var instance = processInstanceService.getProcessInstance(processName, id);
             Response.ok(ctx, instance);
+
+        } catch (IllegalArgumentException e) {
+            Response.handleValidationError(ctx, e);
         }
     }
 
     private void getAllProcessInstances(Context ctx) {
-        var instances = processInstanceService.getProcessInstances();
-        Response.ok(ctx, instances);
+        try {
+            String processName = ctx.pathParam("processName");
+            var instances = processInstanceService.getProcessInstances(processName);
+            Response.ok(ctx, instances);
+
+        } catch (IllegalArgumentException e) {
+            Response.handleValidationError(ctx, e);
+        }
+    }
+
+    private void getProcessDiagram(Context ctx) {
+        // Реализация получения диаграммы
     }
 }

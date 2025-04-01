@@ -25,4 +25,14 @@ public final class Response {
     public static void internalServerError(Context ctx, String message) {
         ctx.status(HttpStatus.INTERNAL_SERVER_ERROR).json(message);
     }
+
+    public static void handleValidationError(Context ctx, Exception e) {
+        if (e.getMessage().contains("not found")) {
+            notFound(ctx);
+        } else if (e.getMessage().contains("Invalid")) {
+            badRequest(ctx, e.getMessage());
+        } else {
+            internalServerError(ctx, e.getMessage());
+        }
+    }
 }

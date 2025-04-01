@@ -2,6 +2,7 @@ package engine.parser;
 
 
 
+import engine.common.TaskDelegate;
 import engine.model.BpmnElement;
 import engine.model.FlowInfo;
 import org.w3c.dom.Document;
@@ -12,7 +13,6 @@ import org.w3c.dom.NodeList;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -33,19 +33,87 @@ public final class BpmnParser {
         SOURCE, TARGET
     }
 
-    public static Map<String, BpmnElement> parseFile(InputStream inputStream) throws ParserConfigurationException, IOException, org.xml.sax.SAXException {
+    public static BpmnParseResult parseFile(InputStream inputStream, List<TaskDelegate> delegates)
+            throws ParserConfigurationException, IOException, org.xml.sax.SAXException {
+
         Map<String, BpmnElement> elementMap = new HashMap<>();
         Map<String, FlowInfo> flowMap = new HashMap<>();
+        Map<String, TaskDelegate> delegateMap = new HashMap<>();
 
         Document document = initializeDocumentBuilder().parse(inputStream);
         document.getDocumentElement().normalize();
 
         NodeList elementsNodeList = document.getElementsByTagName("*");
+        List<Element> processElements = new ArrayList<>();
 
         processSequenceFlows(elementsNodeList, flowMap);
-        processBpmnElements(elementsNodeList, flowMap, elementMap);
+        collectProcessElements(elementsNodeList, processElements);
 
-        return Collections.unmodifiableMap(elementMap);
+        linkDelegates(processElements, delegates, delegateMap, elementMap, flowMap);
+
+        return new BpmnParseResult(
+                Collections.unmodifiableMap(elementMap),
+                Collections.unmodifiableMap(delegateMap)
+        );
+    }
+
+    private static void collectProcessElements(NodeList nodeList, List<Element> processElements) {
+        processElements.clear();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) node;
+                if (isProcessElement(element)) {
+                    processElements.add(element);
+                }
+            }
+        }
+    }
+
+    private static boolean isProcessElement(Element element) {
+        String localName = element.getLocalName();
+        return isBpmnElement(element) &&
+                !"sequenceFlow".equals(localName) &&
+                !"definitions".equals(localName) &&
+                !localName.toLowerCase().contains("event");
+    }
+
+    private static void linkDelegates(List<Element> processElements,
+                                      List<TaskDelegate> delegates,
+                                      Map<String, TaskDelegate> delegateMap,
+                                      Map<String, BpmnElement> elementMap,
+                                      Map<String, FlowInfo> flowMap) {
+        int delegateIndex = 0;
+        int taskCount = 0;
+
+        for (Element element : processElements) {
+            if (isTaskElement(element)) {
+                taskCount++;
+            }
+        }
+
+        if (taskCount != delegates.size()) {
+            throw new IllegalStateException("Количество делегатов (" + delegates.size() +
+                    ") не соответствует количеству задач в BPMN (" + taskCount + ")");
+        }
+
+        for (Element element : processElements) {
+            String id = element.getAttribute("id");
+            if (id.isEmpty()) continue;
+
+            BpmnElement bpmnElement = createBpmnElement(element, flowMap);
+            elementMap.put(id, bpmnElement);
+
+            if (isTaskElement(element)) {
+                delegateMap.put(id, delegates.get(delegateIndex));
+                delegateIndex++;
+            }
+        }
+    }
+
+    private static boolean isTaskElement(Element element) {
+        String localName = element.getLocalName();
+        return localName.contains("task");
     }
 
     private static void processSequenceFlows(NodeList nodeList, Map<String, FlowInfo> flowMap) {
@@ -61,26 +129,13 @@ public final class BpmnParser {
         );
     }
 
-    private static void processBpmnElements(NodeList nodeList, Map<String, FlowInfo> flowMap, Map<String, BpmnElement> elementMap) {
-        processElements(nodeList,
-                element -> isBpmnElement(element)
-                        && !"sequenceFlow".equals(element.getLocalName())
-                        && !"definitions".equals(element.getLocalName()),
-                element -> {
-                    String id = element.getAttribute("id");
-                    if (id.isEmpty()) return;
-
-                    List<String> incoming = getIncomingOrOutgoing(element, "incoming");
-                    List<String> outgoing = getIncomingOrOutgoing(element, "outgoing");
-
-                    elementMap.put(id, new BpmnElement(
-                            id,
-                            element.getAttribute("name"),
-                            element.getLocalName(),
-                            resolveFlowReferences(incoming, flowMap, Direction.SOURCE),
-                            resolveFlowReferences(outgoing, flowMap, Direction.TARGET)
-                    ));
-                }
+    private static BpmnElement createBpmnElement(Element element, Map<String, FlowInfo> flowMap) {
+        return new BpmnElement(
+                element.getAttribute("id"),
+                element.getAttribute("name"),
+                element.getLocalName(),
+                resolveFlowReferences(getIncomingOrOutgoing(element, "incoming"), flowMap, Direction.SOURCE),
+                resolveFlowReferences(getIncomingOrOutgoing(element, "outgoing"), flowMap, Direction.TARGET)
         );
     }
 
@@ -126,5 +181,8 @@ public final class BpmnParser {
                 if (filter.test(element)) processor.accept(element);
             }
         }
+    }
+
+    public record BpmnParseResult(Map<String, BpmnElement> elements, Map<String, TaskDelegate> delegates) {
     }
 }

@@ -1,22 +1,41 @@
+import engine.common.TaskDelegate;
 import engine.model.BpmnElement;
+import engine.model.ExecutionContext;
 import engine.parser.BpmnParser;
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.net.URI;
-import java.util.Map;
+import java.util.*;
 
 class BpmnParserTest {
     private Map<String, BpmnElement> parsedElements;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/diagram.bpmn"})
+    @ValueSource(strings = {"/test2.bpmn"})
     public void parseScheme(String path) {
         try {
-            var scheme = BpmnParser.parseFile(getClass().getResourceAsStream(path));
-            assertFalse(scheme.isEmpty());
-            scheme.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
+            var list = new ArrayList<TaskDelegate>();
+            for (int i = 0 ; i < 3 ; i++) {
+                list.add(new TaskDelegate() {
+                    @Override
+                    public void execute(ExecutionContext context) {
+
+                    }
+
+                    @Override
+                    public void rollback(ExecutionContext context) {
+
+                    }
+                });
+            }
+
+            var result = BpmnParser.parseFile(getClass().getResourceAsStream(path), list);
+            var delegates = result.delegates();
+            delegates.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
+//            List<BpmnElement> values = scheme.values().stream().toList();
+//            for (BpmnElement bpmnElement : values) {
+//                System.out.println(bpmnElement.toString());
+//            }
         } catch (Exception e) {
             e.printStackTrace();
         }

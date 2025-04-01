@@ -1,17 +1,24 @@
 package persistence.repository.impl;
 
-import com.database.entity.generated.tables.InstanceTasks;
+import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 
+import com.database.entity.generated.tables.pojos.InstanceTasks;
 import com.database.entity.generated.tables.records.InstanceTasksRecord;
 import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
+import org.jooq.UpdateSetFirstStep;
+import org.jooq.UpdateSetMoreStep;
+import org.jooq.impl.DSL;
 import persistence.DatabaseConfig;
 import persistence.repository.BaseRepository;
 import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 
+import java.sql.Connection;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
+public class TaskRepository implements BaseRepository<InstanceTasks> {
     private final DSLContext context;
 
     public TaskRepository() {
@@ -19,33 +26,33 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
     }
 
     @Override
-    public void create(InstanceTasksRecord record) {
-        record.store();
+    public void create(InstanceTasks record) {
+        //record.store();
     }
 
     @Override
-    public InstanceTasksRecord getById(UUID id) {
+    public InstanceTasks getById(String name, UUID id) {
         return context
-                .selectFrom(InstanceTasks.INSTANCE_TASKS)
-                .where(InstanceTasks.INSTANCE_TASKS.ID.eq(id))
-                .fetchOne();
+                .selectFrom(INSTANCE_TASKS)
+                .where(INSTANCE_TASKS.ID.eq(id))
+                .fetchOneInto(InstanceTasks.class);
     }
 
     @Override
-    public List<InstanceTasksRecord> getAll() {
-        return context.selectFrom(InstanceTasks.INSTANCE_TASKS).fetch();
+    public List<InstanceTasks> getAll(String name) {
+        return context.selectFrom(INSTANCE_TASKS).fetchInto(InstanceTasks.class);
     }
 
     @Override
     public void delete(UUID id) {
         context
-                .deleteFrom(InstanceTasks.INSTANCE_TASKS)
-                .where(InstanceTasks.INSTANCE_TASKS.ID.eq(id))
+                .deleteFrom(INSTANCE_TASKS)
+                .where(INSTANCE_TASKS.ID.eq(id))
                 .execute();
     }
 
     @Override
-    public void update(InstanceTasksRecord record) {
+    public void update(InstanceTasks record) {
         record.update();
     }
 
@@ -55,7 +62,7 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
                 .set(INSTANCE_TASKS.STATUS, "RUNNING")
                 .where(INSTANCE_TASKS.ID.in(
                         context
-                                .select(InstanceTasks.INSTANCE_TASKS.ID)
+                                .select(INSTANCE_TASKS.ID)
                                 .from(INSTANCE_TASKS)
                                 .where(INSTANCE_TASKS.STATUS.eq("PENDING"))
                                 .orderBy(INSTANCE_TASKS.START_TIME.asc())
@@ -84,5 +91,44 @@ public class TaskRepository implements BaseRepository<InstanceTasksRecord> {
                 .where(INSTANCE_TASKS.ID.eq(newTask.getId()))
                 .execute();
 
+    }
+
+    public void updateTask(Connection connection, com.database.entity.generated.tables.pojos.InstanceTasks task) {
+        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
+        updateTask(dsl, task.getId(), task.getStatus(), task.getStartTime(), task.getEndTime(), task.getCurrentRetriesAmount());
+    }
+
+    public void updateTask(UUID id, String status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
+        updateTask(context, id, status, startTime, endTime, currentRetriesAmount);
+    }
+
+    public void updateTask(Connection connection, UUID id, String status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
+        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
+        updateTask(dsl, id,  status, startTime, endTime, currentRetriesAmount);
+    }
+
+    private void updateTask(DSLContext dsl, UUID id, String status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
+        UpdateSetFirstStep<InstanceTasksRecord> updateStep = dsl.update(INSTANCE_TASKS);
+        UpdateSetMoreStep<InstanceTasksRecord> update = null;
+
+        if (status != null) {
+            update = updateStep.set(INSTANCE_TASKS.STATUS, status);
+        }
+        if (startTime != null) {
+            update = (update == null ? updateStep.set(INSTANCE_TASKS.START_TIME, startTime)
+                    : update.set(INSTANCE_TASKS.START_TIME, startTime));
+        }
+        if (endTime != null) {
+            update = (update == null ? updateStep.set(INSTANCE_TASKS.END_TIME, endTime)
+                    : update.set(INSTANCE_TASKS.END_TIME, endTime));
+        }
+        if (currentRetriesAmount != null) {
+            update = (update == null ? updateStep.set(INSTANCE_TASKS.CURRENT_RETRIES_AMOUNT, currentRetriesAmount)
+                    : update.set(INSTANCE_TASKS.CURRENT_RETRIES_AMOUNT, currentRetriesAmount));
+        }
+
+        if (update != null) {
+            update.where(INSTANCE_TASKS.ID.eq(id)).execute();
+        }
     }
 }

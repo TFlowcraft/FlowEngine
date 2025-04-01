@@ -18,17 +18,17 @@ public class HistoryController implements ControllerSetup {
 
     @Override
     public void registerEndpoints(Javalin app) {
-        app.get("/process/{processName}/instance/{instanceId}/task/history/{taskId}", this::getHistoryTask);
-        app.get("/process/{processName}/instance/{instanceId}/task/history/all", this::getTimelineTask);
+        app.get("/process/:processName/instance/:instanceId/task/history/:taskId", this::getInstanceHistoryTaskById);
+        app.get("/process/:processName/instance/:instanceId/task/history/all", this::getInstanceHistoryTaskAll);
     }
 
-    private void getHistoryTask(Context ctx) {
+    private void getInstanceHistoryTaskById(Context ctx) {
         var id = UUID.fromString(ctx.pathParam("id"));
         var data = historyService.getHistory(id);
         Response.ok(ctx, data);
     }
 
-    private void getTimelineTask(Context ctx) {
+    private void getInstanceHistoryTaskAll(Context ctx) {
         var id = UUID.fromString(ctx.pathParam("id"));
     }
 

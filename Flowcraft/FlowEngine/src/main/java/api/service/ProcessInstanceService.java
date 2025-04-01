@@ -14,8 +14,8 @@ public class ProcessInstanceService {
         this.repository = repository;
     }
 
-    public ProcessInstance getProcessInstance(UUID id) {
-        return repository.getById(id).into(ProcessInstance.class);
+    public ProcessInstance getProcessInstance(String processName, UUID id) {
+        return repository.getById(processName, id).into(ProcessInstance.class);
     }
 
     public List<ProcessInstance> getProcessInstances() {

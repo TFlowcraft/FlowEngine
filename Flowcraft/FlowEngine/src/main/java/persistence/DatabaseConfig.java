@@ -23,7 +23,7 @@ public class DatabaseConfig {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
         config.setUsername(jdbcUser);
-        config.setPassword(jdbcPassword);   
+        config.setPassword(jdbcPassword);
         config.setMaximumPoolSize(POOL_SIZE);
         config.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
         config.setIdleTimeout(IDLE_TIMEOUT_MS);

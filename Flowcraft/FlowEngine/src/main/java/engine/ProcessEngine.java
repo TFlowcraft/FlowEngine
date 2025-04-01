@@ -1,13 +1,19 @@
 package engine;
 
+import api.controller.impl.HistoryController;
+import api.controller.impl.ProcessInstanceController;
+import api.service.HistoryService;
+import api.service.ProcessInstanceService;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.common.TaskDelegate;
 import engine.executor.TaskExecutor;
 import engine.model.BpmnElement;
 import engine.parser.BpmnParser;
+import io.javalin.Javalin;
 import org.jooq.JSONB;
 import org.xml.sax.SAXException;
 import persistence.poller.ProcessPoller;
+import persistence.repository.impl.HistoryRepository;
 import persistence.repository.impl.ProcessInstanceRepository;
 import persistence.repository.impl.TaskRepository;
 
@@ -110,9 +116,16 @@ public class ProcessEngine {
         }
 
         public ProcessEngine build() throws ParserConfigurationException, IOException, SAXException {
+
             var parserResult = BpmnParser.parseFile(inputStream, new ArrayList<>());
             ProcessPoller processPoller = new ProcessPoller(engineQueue, taskRepository, new ScheduledThreadPoolExecutor(poolSize));
             TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount);
+            Javalin app = Javalin.create().start(8080);
+            HistoryController hController = new HistoryController(new HistoryService(new HistoryRepository()));
+            ProcessInstanceController pController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository));
+            hController.registerEndpoints(app);
+            pController.registerEndpoints(app);
+            System.out.println("Server started on http://localhost:8080");
             return new ProcessEngine(parserResult.elements(), userTaskImplementation, processInstanceRepository, taskRepository, processPoller, taskExecutor);
         }
     }

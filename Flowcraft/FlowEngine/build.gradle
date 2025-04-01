@@ -29,7 +29,10 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
+def generatedJooqDir = layout.buildDirectory.dir("generated/jooq")
+
 jooq {
+    version = '3.20.2'
     configurations {
         main {
             generationTool {
@@ -55,7 +58,7 @@ jooq {
                     }
                     target {
                         packageName = 'com.database.entity.generated'
-                        directory = layout.buildDirectory.dir("generated/jooq").get().asFile.absolutePath
+                        directory = generatedJooqDir.get().asFile.absoluteFile
                     }
                 }
             }
@@ -66,13 +69,13 @@ jooq {
 sourceSets {
     main {
         java {
-            srcDirs += layout.buildDirectory.dir("generated/jooq").get().asFile
+            srcDirs += generatedJooqDir.get().asFile
         }
     }
 }
 
 tasks.named("compileJava").configure {
-    dependsOn("jooqGenerate")
+    dependsOn("generateJooq")
 }
 
 test {

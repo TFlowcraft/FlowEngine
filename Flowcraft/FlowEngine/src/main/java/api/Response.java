@@ -30,7 +30,7 @@ public final class Response {
         if (e.getMessage().contains("not found")) {
             notFound(ctx);
         } else if (e.getMessage().contains("Invalid")) {
-            badRequest(ctx, e.getMessage());
+            Response.internalServerError(ctx, e.getMessage());//badRequest(ctx, e.getMessage());
         } else {
             internalServerError(ctx, e.getMessage());
         }

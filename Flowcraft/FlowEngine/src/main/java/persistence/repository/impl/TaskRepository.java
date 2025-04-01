@@ -10,7 +10,6 @@ import org.jooq.UpdateSetFirstStep;
 import org.jooq.UpdateSetMoreStep;
 import org.jooq.impl.DSL;
 import persistence.DatabaseConfig;
-import persistence.repository.BaseRepository;
 import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 
 import java.sql.Connection;
@@ -18,19 +17,19 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public class TaskRepository implements BaseRepository<InstanceTasks> {
+public class TaskRepository  {
     private final DSLContext context;
 
     public TaskRepository() {
         this.context = DatabaseConfig.getContext();
     }
 
-    @Override
+
     public void create(InstanceTasks record) {
         //record.store();
     }
 
-    @Override
+
     public InstanceTasks getById(String name, UUID id) {
         return context
                 .selectFrom(INSTANCE_TASKS)
@@ -38,12 +37,12 @@ public class TaskRepository implements BaseRepository<InstanceTasks> {
                 .fetchOneInto(InstanceTasks.class);
     }
 
-    @Override
+
     public List<InstanceTasks> getAll(String name) {
         return context.selectFrom(INSTANCE_TASKS).fetchInto(InstanceTasks.class);
     }
 
-    @Override
+
     public void delete(UUID id) {
         context
                 .deleteFrom(INSTANCE_TASKS)
@@ -51,9 +50,8 @@ public class TaskRepository implements BaseRepository<InstanceTasks> {
                 .execute();
     }
 
-    @Override
     public void update(InstanceTasks record) {
-        record.update();
+        //record.update();
     }
 
     public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int batchSize) {

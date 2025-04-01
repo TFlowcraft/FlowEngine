@@ -20,7 +20,7 @@ public class ProcessEngineTest {
     @ParameterizedTest
     @ValueSource(strings = {"/diagram.bpmn"})
     public void createProcessEngine(String processSchemePath) {
-        TaskService service = new TaskService(new TaskRepository());
+        TaskRepository service = new TaskRepository();
         List<TaskDelegate> taskDelegates = getTaskDelegates();
         var queue = new ArrayBlockingQueue<InstanceTasks>(100);
         try {
@@ -36,7 +36,7 @@ public class ProcessEngineTest {
             ProcessPoller poller = new ProcessPoller(queue, new TaskRepository(), new ScheduledThreadPoolExecutor(100));
             poller.start();
             processEngine.createProcessInstance(null);
-            var instance = service.getAllTasks();
+            var instance = service.getAll("");
             for (var task : instance) {
                 System.out.println(task.toString());
             }

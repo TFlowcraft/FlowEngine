@@ -10,27 +10,26 @@ import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.QOM;
 import persistence.DatabaseConfig;
-import persistence.repository.BaseRepository;
 
 import java.sql.Connection;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public class ProcessInstanceRepository implements BaseRepository<ProcessInstance> {
+public class ProcessInstanceRepository {
     private final DSLContext context;
 
     public ProcessInstanceRepository() {
         this.context = DatabaseConfig.getContext();
     }
 
-    @Override
+
     public void create(ProcessInstance record) {
        // record.store();
     }
 
-    @Override
-    public ProcessInstance getById(String name, UUID instanceId) {
+
+    public ProcessInstance getById(String processName, UUID instanceId) {
     return context
         .select(PROCESS_INSTANCE.fields())
         .from(PROCESS_INSTANCE)
@@ -40,18 +39,16 @@ public class ProcessInstanceRepository implements BaseRepository<ProcessInstance
         .fetchOneInto(ProcessInstance.class);
     }
 
-    @Override
-    public List<ProcessInstance> getAll(String name) {
+    public List<ProcessInstance> getAll(String processName) {
         return context
                 .select(PROCESS_INSTANCE.fields())
                 .from(PROCESS_INSTANCE)
                 .join(ProcessInfo.PROCESS_INFO)
                 .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
-                .where(PROCESS_INSTANCE.ID.eq(instanceId))
+                .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
                 .fetchInto(ProcessInstance.class);
     }
 
-    @Override
     public void delete(UUID id) {
         context
                 .deleteFrom(PROCESS_INSTANCE)
@@ -59,8 +56,6 @@ public class ProcessInstanceRepository implements BaseRepository<ProcessInstance
                 .execute();
     }
 
-
-    @Override
     public void update(ProcessInstance record) {
         //record.update();
     }

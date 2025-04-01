@@ -15,13 +15,11 @@ public class HistoryService {
         this.historyRepository = historyRepository;
     }
 
-    public ProcessInstance getHistory(UUID processInstanceId) {
-        return historyRepository.getById(processInstanceId).into(ProcessInstance.class);
+    public InstanceHistory getHistoryTaskById(String processName, UUID instanceId, UUID taskId) {
+        return historyRepository.getById(processName, instanceId, taskId);
     }
 
-    public List<InstanceHistory> getHistories() {
-        return historyRepository.getAll().stream()
-                .map(record -> record.into(InstanceHistory.class))
-                .collect(Collectors.toList());
+    public List<InstanceHistory> getAllHistoryTask(String processName, UUID instanceId) {
+        return historyRepository.getAll(processName, instanceId);
     }
 }

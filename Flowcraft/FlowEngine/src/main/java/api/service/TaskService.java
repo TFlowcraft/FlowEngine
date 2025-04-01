@@ -10,25 +10,21 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class TaskService  {
-    private final TaskRepository taskRepository;
-
-    public TaskService(TaskRepository taskRepository) {
-        this.taskRepository = taskRepository;
-    }
-
-    public InstanceTasks getInstanceHistory(UUID id) {
-        return taskRepository.getById(id).into(InstanceTasks.class);
-    }
-
-    public List<InstanceTasks> getAllInstanceHistory() {
-        return taskRepository.getAll().stream()
-                .map(record -> record.into(InstanceTasks.class))
-                .collect(Collectors.toList());
-    }
-
-    public List<InstanceTasks> getAllTasks() {
-        return taskRepository.getAll().stream()
-                .map(record -> record.into(InstanceTasks.class))
-                .collect(Collectors.toList());
-    }
+//    private final TaskRepository taskRepository;
+//
+//    public TaskService(TaskRepository taskRepository) {
+//        this.taskRepository = taskRepository;
+//    }
+//
+//    public InstanceTasks getInstanceHistory(UUID id) {
+//        return taskRepository.getById(id).into(InstanceTasks.class);
+//    }
+//
+//    public List<InstanceTasks> getAllInstanceHistory(String processName) {
+//        return taskRepository.getAll(processName);
+//    }
+//
+//    public List<InstanceTasks> getAllTasks(String processN) {
+//       // return taskRepository.getById(processName, id);
+//    }
 }

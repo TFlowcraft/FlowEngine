@@ -16,14 +16,14 @@ public class DatabaseConfig {
     private static final HikariDataSource dataSource;
 
     static {
-        Dotenv dotenv = Dotenv.load();
-        String jdbcUrl = dotenv.get("DB_URL");
-        String jdbcUser = dotenv.get("DB_USER");
-        String jdbcPassword = dotenv.get("DB_PASSWORD");
+        //Dotenv dotenv = Dotenv.load();
+        String jdbcUrl = "jdbc:postgresql://localhost:5432/process_engine";
+        String jdbcUser = "postgres";
+        String jdbcPassword = "postgres";
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
         config.setUsername(jdbcUser);
-        config.setPassword(jdbcPassword);
+        config.setPassword(jdbcPassword);   
         config.setMaximumPoolSize(POOL_SIZE);
         config.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
         config.setIdleTimeout(IDLE_TIMEOUT_MS);

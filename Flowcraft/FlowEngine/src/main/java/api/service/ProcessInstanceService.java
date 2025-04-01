@@ -5,7 +5,6 @@ import persistence.repository.impl.ProcessInstanceRepository;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class ProcessInstanceService {
     private final ProcessInstanceRepository repository;
@@ -14,13 +13,11 @@ public class ProcessInstanceService {
         this.repository = repository;
     }
 
-    public ProcessInstance getProcessInstance(String processName, UUID id) {
-        return repository.getById(processName, id).into(ProcessInstance.class);
+    public ProcessInstance getProcessInstanceById(String processName, UUID processInstanceId) {
+        return repository.getById(processName, processInstanceId);
     }
 
-    public List<ProcessInstance> getProcessInstances() {
-        return repository.getAll().stream()
-                .map(record -> record.into(ProcessInstance.class))
-                .collect(Collectors.toList());
+    public List<ProcessInstance> getAllProcessInstances(String processName) {
+        return repository.getAll(processName);
     }
 }

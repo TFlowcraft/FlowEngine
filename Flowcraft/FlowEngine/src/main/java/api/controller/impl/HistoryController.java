@@ -23,13 +23,19 @@ public class HistoryController implements ControllerSetup {
     }
 
     private void getInstanceHistoryTaskById(Context ctx) {
-        var id = UUID.fromString(ctx.pathParam("id"));
-        var data = historyService.getHistory(id);
+        var taskId = UUID.fromString(ctx.pathParam("id"));
+        var processName = ctx.pathParam("processName");
+        var instanceId = UUID.fromString(ctx.pathParam("instanceId"));
+
+        var data = historyService.getHistoryTaskById(processName, instanceId, taskId);
         Response.ok(ctx, data);
     }
 
     private void getInstanceHistoryTaskAll(Context ctx) {
         var id = UUID.fromString(ctx.pathParam("id"));
+        var processName = ctx.pathParam("processName");
+        var instanceId = ctx.pathParam("instanceId");
     }
+
 
 }

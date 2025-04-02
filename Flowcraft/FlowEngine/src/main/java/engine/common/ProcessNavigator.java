@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 public class ProcessNavigator {
     private final Map<String, BpmnElement> elements;
 
-    public ProcessNavigator(BpmnParseResult parseResult) {
-        this.elements = Collections.unmodifiableMap(parseResult.elements());
+    public ProcessNavigator(Map<String, BpmnElement> elements) {
+        this.elements = Collections.unmodifiableMap(elements);
     }
 
     // Основные методы навигации
@@ -28,6 +28,15 @@ public class ProcessNavigator {
                 ? Optional.of(outgoing.get(0))
                 : Optional.empty();
     }
+
+   public Optional<BpmnElement> findElementByType(String type) {
+        for (BpmnElement element : elements.values()) {
+            if (element.getType().equals(type)) {
+                return Optional.of(element);
+            }
+        }
+        return Optional.empty();
+   }
 
     public List<BpmnElement> getIncomingElements(String elementId) {
         return resolveElementReferences(elementId, false);

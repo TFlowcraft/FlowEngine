@@ -74,8 +74,8 @@ public final class BpmnParser {
         String localName = element.getLocalName();
         return isBpmnElement(element) &&
                 !"sequenceFlow".equals(localName) &&
-                !"definitions".equals(localName) &&
-                !localName.toLowerCase().contains("event");
+                !"definitions".equals(localName);
+        // !localName.toLowerCase().contains("event");
     }
 
     private static void linkDelegates(List<Element> processElements,

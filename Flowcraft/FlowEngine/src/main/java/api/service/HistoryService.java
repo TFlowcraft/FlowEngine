@@ -15,7 +15,7 @@ public class HistoryService {
         this.historyRepository = historyRepository;
     }
 
-    public InstanceHistory getHistoryTaskById(String processName, UUID instanceId, UUID taskId) {
+    public List<InstanceHistory> getHistoryTaskById(String processName, UUID instanceId, UUID taskId) {
         return historyRepository.getById(processName, instanceId, taskId);
     }
 

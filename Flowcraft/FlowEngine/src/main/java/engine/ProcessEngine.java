@@ -3,8 +3,10 @@ package engine;
 import api.controller.impl.HistoryController;
 import api.controller.impl.ProcessInstanceController;
 import api.service.HistoryService;
+import api.service.ProcessInfoService;
 import api.service.ProcessInstanceService;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
+import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
 import engine.executor.TaskExecutor;
 import engine.model.BpmnElement;
@@ -14,6 +16,7 @@ import org.jooq.JSONB;
 import org.xml.sax.SAXException;
 import persistence.poller.ProcessPoller;
 import persistence.repository.impl.HistoryRepository;
+import persistence.repository.impl.ProcessInfoRepository;
 import persistence.repository.impl.ProcessInstanceRepository;
 import persistence.repository.impl.TaskRepository;
 
@@ -30,32 +33,24 @@ public class ProcessEngine {
     private final TaskRepository taskRepository;
     private final ProcessPoller processPoller;
     private final TaskExecutor taskExecutor;
+    private final ProcessNavigator processNavigator;
 
-    public ProcessEngine(Map<String, BpmnElement> bpmnProcess, List<TaskDelegate> userTaskImplementation, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, ProcessPoller processPoller, TaskExecutor taskExecutor) {
+    public ProcessEngine(Map<String, BpmnElement> bpmnProcess, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, ProcessPoller processPoller, TaskExecutor taskExecutor) {
         this.bpmnProcess = bpmnProcess;
         this.processInstanceRepository = processInstanceRepository;
         this.taskRepository = taskRepository;
         this.processPoller = processPoller;
         this.taskExecutor = taskExecutor;
+        processNavigator = new ProcessNavigator(bpmnProcess);
     }
 
     public void createProcessInstance(JSONB businessData) {
         UUID id = processInstanceRepository.createNew(businessData);
-        //хард код и вообще тут отдельный метод должен быть чтоб либо первое движение сделать либо отдельный сервис
-        var entry = getEntryByContainType("startEvent");
-        var next = entry != null ? entry.getValue().getOutgoing() : null;
-        for (var outgoing : next) {
-            taskRepository.createTaskForInstance(id, outgoing);
+        var startEvent = processNavigator.findElementByType("startEvent").get();
+        var outputEvent = processNavigator.getOutgoingElements(startEvent.getId());
+        for (var el : outputEvent) {
+            taskRepository.createTaskForInstance(id, el.getId());
         }
-    }
-
-    private Map.Entry<String, BpmnElement> getEntryByContainType(String type) {
-        for (Map.Entry<String, BpmnElement> entry : bpmnProcess.entrySet()) {
-            if (entry.getValue().getType().equals(type)) {
-                return entry;
-            }
-        }
-        return null;
     }
 
     public void start() {
@@ -117,16 +112,17 @@ public class ProcessEngine {
 
         public ProcessEngine build() throws ParserConfigurationException, IOException, SAXException {
 
-            var parserResult = BpmnParser.parseFile(inputStream, new ArrayList<>());
+            var parserResult = BpmnParser.parseFile(inputStream, userTaskImplementation);
             ProcessPoller processPoller = new ProcessPoller(engineQueue, taskRepository, new ScheduledThreadPoolExecutor(poolSize));
             TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount);
             Javalin app = Javalin.create().start(8080);
             HistoryController hController = new HistoryController(new HistoryService(new HistoryRepository()));
-            ProcessInstanceController pController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository));
+            ProcessInstanceController pController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
+                    new ProcessInfoService(new ProcessInfoRepository()));
             hController.registerEndpoints(app);
             pController.registerEndpoints(app);
             System.out.println("Server started on http://localhost:8080");
-            return new ProcessEngine(parserResult.elements(), userTaskImplementation, processInstanceRepository, taskRepository, processPoller, taskExecutor);
+            return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor);
         }
     }
 }

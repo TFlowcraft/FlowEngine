@@ -11,11 +11,11 @@ class BpmnParserTest {
     private Map<String, BpmnElement> parsedElements;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/test2.bpmn"})
+    @ValueSource(strings = {"/processWithName.bpmn"})
     public void parseScheme(String path) {
         try {
             var list = new ArrayList<TaskDelegate>();
-            for (int i = 0 ; i < 3 ; i++) {
+            for (int i = 0 ; i < 1 ; i++) {
                 list.add(new TaskDelegate() {
                     @Override
                     public void execute(ExecutionContext context) {
@@ -30,7 +30,7 @@ class BpmnParserTest {
             }
 
             var result = BpmnParser.parseFile(getClass().getResourceAsStream(path), list);
-            var delegates = result.delegates();
+            var delegates = result.elements();
             delegates.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
 //            List<BpmnElement> values = scheme.values().stream().toList();
 //            for (BpmnElement bpmnElement : values) {

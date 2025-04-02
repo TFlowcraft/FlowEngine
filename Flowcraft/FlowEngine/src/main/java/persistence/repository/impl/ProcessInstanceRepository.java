@@ -30,24 +30,26 @@ public class ProcessInstanceRepository {
 
 
     public ProcessInstance getById(String processName, UUID instanceId) {
-    return context
-        .select(PROCESS_INSTANCE.fields())
-        .from(PROCESS_INSTANCE)
-        .join(ProcessInfo.PROCESS_INFO)
-        .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
-        .where(PROCESS_INSTANCE.ID.eq(instanceId))
-        .fetchOneInto(ProcessInstance.class);
+        return context
+                .select(PROCESS_INSTANCE.fields())
+                .from(PROCESS_INSTANCE)
+                .rightJoin(ProcessInfo.PROCESS_INFO)  // Используем rightJoin, если нужно все записи из ProcessInfo
+                .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
+                .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
+                .and(PROCESS_INSTANCE.ID.eq(instanceId))
+                .fetchOneInto(ProcessInstance.class);
     }
 
     public List<ProcessInstance> getAll(String processName) {
         return context
                 .select(PROCESS_INSTANCE.fields())
                 .from(PROCESS_INSTANCE)
-                .join(ProcessInfo.PROCESS_INFO)
+                .rightJoin(ProcessInfo.PROCESS_INFO)  // Используем rightJoin, если нужно все записи из ProcessInfo
                 .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
                 .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
                 .fetchInto(ProcessInstance.class);
     }
+
 
     public void delete(UUID id) {
         context
@@ -102,4 +104,5 @@ public class ProcessInstanceRepository {
                 .where(PROCESS_INSTANCE.ID.eq(instanceId))
                 .fetchOne(PROCESS_INSTANCE.BUSINESS_DATA);
     }
+
 }

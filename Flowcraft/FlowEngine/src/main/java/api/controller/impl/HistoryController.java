@@ -18,23 +18,37 @@ public class HistoryController implements ControllerSetup {
 
     @Override
     public void registerEndpoints(Javalin app) {
-        app.get("/process/:processName/instance/:instanceId/task/history/:taskId", this::getInstanceHistoryTaskById);
-        app.get("/process/:processName/instance/:instanceId/task/history/all", this::getInstanceHistoryTaskAll);
+        app.get("/process/{processName}/instance/{instanceId}/task/history/{taskId}", this::getInstanceHistoryTaskById);
+        app.get("/process/{processName}/instance/{instanceId}/task/history", this::getInstanceHistoryTaskAll);
     }
 
     private void getInstanceHistoryTaskById(Context ctx) {
-        var taskId = UUID.fromString(ctx.pathParam("id"));
-        var processName = ctx.pathParam("processName");
-        var instanceId = UUID.fromString(ctx.pathParam("instanceId"));
+        try {
+            System.out.println(ctx.pathParam("taskId"));
+            System.out.println(ctx.pathParam("processName"));
+            System.out.println(ctx.pathParam("instanceId"));
+            var taskId = UUID.fromString(ctx.pathParam("taskId"));
+            var processName = ctx.pathParam("processName");
+            var instanceId = UUID.fromString(ctx.pathParam("instanceId"));
 
-        var data = historyService.getHistoryTaskById(processName, instanceId, taskId);
-        Response.ok(ctx, data);
+            var historyTask = historyService.getHistoryTaskById(processName, instanceId, taskId);
+            Response.ok(ctx, historyTask);
+
+        } catch (IllegalArgumentException e) {
+            Response.handleValidationError(ctx, e);
+        }
     }
 
     private void getInstanceHistoryTaskAll(Context ctx) {
-        var id = UUID.fromString(ctx.pathParam("id"));
-        var processName = ctx.pathParam("processName");
-        var instanceId = ctx.pathParam("instanceId");
+        try {
+            var processName = ctx.pathParam("processName");
+            var instanceId = UUID.fromString(ctx.pathParam("instanceId"));
+            var historyTasks = historyService.getAllHistoryTask(processName, instanceId);
+            Response.ok(ctx, historyTasks);
+
+        } catch (IllegalArgumentException e) {
+            Response.handleValidationError(ctx, e);
+        }
     }
 
 

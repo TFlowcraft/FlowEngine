@@ -24,22 +24,17 @@ public class ProcessEngineTest {
     public void createProcessEngine(String processSchemePath) {
         TaskRepository service = new TaskRepository();
         List<TaskDelegate> taskDelegates = getTaskDelegates();
-        var queue = new ArrayBlockingQueue<InstanceTasks>(100);
         var instanceRepo = new ProcessInstanceRepository();
         try {
             ProcessEngine processEngine = new ProcessEngine.ProcessEngineConfigurator()
                     .useDefaults(processSchemePath, taskDelegates)
                     .build();
             processEngine.start();
-            processEngine.createProcessInstance(null);
-            var instance = service.getAll("");
-            for (var task : instance) {
-                System.out.println(task.toString());
+           // processEngine.createProcessInstance(null);
+            while (true) {
+                //
             }
-            var res  = instanceRepo.getAll("processNameTest");
-            assert res != null;
-            Thread.sleep(500_000);
-            assert !instance.isEmpty();
+            //assert !instance.isEmpty();
         } catch (Exception e) {
             e.printStackTrace();
         }

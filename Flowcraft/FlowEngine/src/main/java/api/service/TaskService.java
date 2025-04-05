@@ -1,30 +1,30 @@
-package api.service;
-
-
-import com.database.entity.generated.tables.pojos.InstanceHistory;
-import com.database.entity.generated.tables.pojos.InstanceTasks;
-import persistence.repository.impl.TaskRepository;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-public class TaskService  {
-//    private final TaskRepository taskRepository;
+//package api.service;
 //
-//    public TaskService(TaskRepository taskRepository) {
-//        this.taskRepository = taskRepository;
-//    }
 //
-//    public InstanceTasks getInstanceHistory(UUID id) {
-//        return taskRepository.getById(id).into(InstanceTasks.class);
-//    }
+//import com.database.entity.generated.tables.pojos.InstanceHistory;
+//import com.database.entity.generated.tables.pojos.InstanceTasks;
+//import persistence.repository.impl.TaskRepository;
 //
-//    public List<InstanceTasks> getAllInstanceHistory(String processName) {
-//        return taskRepository.getAll(processName);
-//    }
+//import java.util.List;
+//import java.util.UUID;
+//import java.util.stream.Collectors;
 //
-//    public List<InstanceTasks> getAllTasks(String processN) {
-//       // return taskRepository.getById(processName, id);
-//    }
-}
+//public class TaskService  {
+////    private final TaskRepository taskRepository;
+////
+////    public TaskService(TaskRepository taskRepository) {
+////        this.taskRepository = taskRepository;
+////    }
+////
+////    public InstanceTasks getInstanceHistory(UUID id) {
+////        return taskRepository.getById(id).into(InstanceTasks.class);
+////    }
+////
+////    public List<InstanceTasks> getAllInstanceHistory(String processName) {
+////        return taskRepository.getAll(processName);
+////    }
+////
+////    public List<InstanceTasks> getAllTasks(String processN) {
+////       // return taskRepository.getById(processName, id);
+////    }
+//}

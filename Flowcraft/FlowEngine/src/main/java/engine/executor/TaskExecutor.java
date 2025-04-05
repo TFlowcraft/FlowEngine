@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+//TODO Добавить нормальный переход на создание следующей таски
+// Посмотреть где и как обработать ошибки
+// Подумать, что делать с retry и где его запускать
 public class TaskExecutor {
     private final BlockingQueue<InstanceTasks> taskQueue;
     private final ExecutorService executor;

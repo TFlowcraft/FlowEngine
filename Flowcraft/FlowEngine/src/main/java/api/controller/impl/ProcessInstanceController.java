@@ -23,15 +23,15 @@ public class ProcessInstanceController implements ControllerSetup {
 
     @Override
     public void registerEndpoints(Javalin app) {
-        app.get("/", ctx -> {
-            String info = "Javalin web app";
-            System.out.println(info);
-            ctx.result(info);
-            //ctx.json(info);
-        });
+        app.get("/", this::infoEndpoint);
         app.get("/process/{processName}/instance/{id}", this::getProcessInstanceById);
         app.get("/process/{processName}/instance", this::getAllProcessInstances);
         app.get("/process/{processName}/diagram", this::getProcessDiagram);
+    }
+
+    private void infoEndpoint(Context ctx) {
+       String info = "Javalin web app";
+       Response.ok(ctx, info);
     }
 
     private void getProcessInstanceById(Context ctx) {

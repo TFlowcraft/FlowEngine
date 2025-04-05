@@ -8,18 +8,21 @@ import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 
 public class DatabaseConfig {
-    private static final int POOL_SIZE = 10;
+    private static final int POOL_SIZE = 100;
     private static final long CONNECTION_TIMEOUT_MS = 30_000;
     private static final long IDLE_TIMEOUT_MS = 600_000;
     private static final long MAX_LIFETIME_MS = 1_800_000;
 
-    private static final HikariDataSource dataSource;
+    private static HikariDataSource dataSource;
 
-    static {
-        //Dotenv dotenv = Dotenv.load();
-        String jdbcUrl = "jdbc:postgresql://localhost:5432/process_engine";
-        String jdbcUser = "postgres";
-        String jdbcPassword = "postgres";
+    private DatabaseConfig() {
+    }
+
+    public static void setupConfig(String jdbcUrl, String jdbcUser, String jdbcPassword) {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+        }
+
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
         config.setUsername(jdbcUser);
@@ -32,7 +35,19 @@ public class DatabaseConfig {
         dataSource = new HikariDataSource(config);
     }
 
+    public static void setupFromEnv() {
+        Dotenv dotenv = Dotenv.load();
+        String jdbcUrl = dotenv.get("DB_URL");
+        String jdbcUser = dotenv.get("DB_USER");
+        String jdbcPassword = dotenv.get("DB_PASSWORD");
+
+        setupConfig(jdbcUrl, jdbcUser, jdbcPassword);
+    }
+
     public static DSLContext getContext() {
+        if (dataSource == null) {
+            throw new IllegalStateException("DataSource is not configured. Call setupConfig first.");
+        }
         return DSL.using(dataSource, SQLDialect.POSTGRES);
     }
 

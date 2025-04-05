@@ -1,6 +1,7 @@
 package engine.executor;
 
 import com.database.entity.generated.tables.pojos.InstanceTasks;
+import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
 import engine.model.ExecutionContext;
 import org.jooq.JSONB;
@@ -15,6 +16,9 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static persistence.repository.impl.TaskRepository.createFailedTask;
+import static persistence.repository.impl.TaskRepository.createRetryTask;
+
 //TODO Добавить нормальный переход на создание следующей таски
 // Посмотреть где и как обработать ошибки
 // Подумать, что делать с retry и где его запускать
@@ -27,12 +31,13 @@ public class TaskExecutor {
     private final Map<String, TaskDelegate> userTasks;
     private final int THREAD_POOL_SIZE;
     private final int RETRIES_AMOUNT;
+    private final ProcessNavigator processNavigator;
 
     public TaskExecutor(BlockingQueue<InstanceTasks> taskQueue,
                         int threadPoolSize, ProcessInstanceRepository processInstanceRepository,
                         TaskRepository taskRepository,
                         Map<String, TaskDelegate> userTasks,
-                        int retriesAmount) {
+                        int retriesAmount, ProcessNavigator processNavigator) {
         this.taskQueue = taskQueue;
         this.executor = Executors.newFixedThreadPool(threadPoolSize);
         THREAD_POOL_SIZE = threadPoolSize;
@@ -40,6 +45,7 @@ public class TaskExecutor {
         this.taskRepository = taskRepository;
         this.userTasks = userTasks;
         this.RETRIES_AMOUNT = retriesAmount;
+        this.processNavigator = processNavigator;
     }
 
     public void start() {
@@ -63,6 +69,11 @@ public class TaskExecutor {
 
     private void processTask(InstanceTasks task) throws SQLException {
         OffsetDateTime startedAt = OffsetDateTime.now();
+        /*check what we are exec
+        * if bpmnElementId.get() == task then we use userImpl and exec
+        * if bpmnElementId.get() == gateway then we check IN task status and if they completed, we create OUT tasks
+        * but, we need to wait or retry task if IN tasks are not completed
+         */
         TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
         if (userImpl == null) {
             handleMissingImplementation(task);
@@ -73,35 +84,29 @@ public class TaskExecutor {
                     processInstanceRepository.getBusinessData(task.getInstanceId())));
             handleTaskSuccess(task, startedAt);
         } catch (Exception e) {
+            //here we do retry and rollback's
             handleTaskFailure(task, userImpl, startedAt, e);
         }
     }
 
-    private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) {
-        try {
-            TransactionManager.executeInTransaction(connection -> {
-                taskRepository.updateTask(connection, task.getId(),
-                        "SUCCESS",startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
-                createNextTasks(task, connection);
-            });
-        } catch (Exception e) {
-            // Здесь обработать ошибки
-            handleTaskFailure(task, null, startedAt, e);
-        }
+    private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {
+        TransactionManager.executeInTransaction(connection -> {
+            taskRepository.updateTask(connection, task.getId(),
+                    "SUCCESS",startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
+            createNextTask(task, connection);
+        });
     }
 
-    private void createNextTasks(InstanceTasks task, Connection connection) {
-        //Tут отдельный компонент который достает следующий элемент и создает в БД
-//        processEngine.getBpmnProcess()
-//                .get(task.getBpmnElementId())
-//                .getOutgoing()
-//                .forEach(nextElementId ->
-//                        taskRepository.createTaskForInstance(
-//                                task.getInstanceId(),
-//                                nextElementId,
-//                                connection
-//                        )
-//                );
+    private void createNextTask(InstanceTasks task, Connection connection) {
+        processNavigator.getOutgoingElements(task.getBpmnElementId())
+                .forEach(element ->  {
+                    if (element.getType().equals("endEvent")) {
+                        processInstanceRepository.updateInstance(connection, task.getInstanceId(),null, null, OffsetDateTime.now());
+                    } else {
+                        taskRepository.createTaskForInstance(task.getInstanceId(),
+                                element.getId(), connection);
+                    }
+                });
     }
 
     private void handleTaskFailure(InstanceTasks task,
@@ -118,12 +123,10 @@ public class TaskExecutor {
                     taskRepository.updateTask(connection, updatedTask.getId(), "FAIL", null, OffsetDateTime.now(), null);
                     processInstanceRepository.updateInstance(connection, task.getInstanceId(), null, null, OffsetDateTime.now());
                 } else {
-                    int newRetriesAmount = task.getCurrentRetriesAmount() + 1;
-                    taskRepository.updateTask(connection, updatedTask.getId(), null, null, null, newRetriesAmount);
+                    taskRepository.updateTask(connection, updatedTask);
                     taskQueue.add(updatedTask);
                 }
             });
-
             if (userImpl != null) {
                 performRollback(userImpl, task, processInstanceRepository.getBusinessData(task.getInstanceId()));
             }
@@ -136,37 +139,9 @@ public class TaskExecutor {
         return task.getCurrentRetriesAmount() < RETRIES_AMOUNT;
     }
 
-    private InstanceTasks createRetryTask(InstanceTasks task, OffsetDateTime startedAt) {
-        taskQueue.add(task);
-        return new InstanceTasks(
-                task.getId(),
-                task.getInstanceId(),
-                task.getBpmnElementId(),
-                "PENDING",
-                startedAt,
-                null,
-                task.getCurrentRetriesAmount() + 1
-        );
-    }
-
-    private InstanceTasks createFailedTask(InstanceTasks task, OffsetDateTime startedAt) {
-        return new InstanceTasks(
-                task.getId(),
-                task.getInstanceId(),
-                task.getBpmnElementId(),
-                "FAILED",
-                startedAt,
-                OffsetDateTime.now(),
-                task.getCurrentRetriesAmount()
-        );
-    }
 
     private void performRollback(TaskDelegate userImpl, InstanceTasks task, JSONB businessData) {
-        try {
-            userImpl.rollback(new ExecutionContext(task, businessData));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        userImpl.rollback(new ExecutionContext(task, businessData));
     }
 
     private void handleMissingImplementation(InstanceTasks task) throws SQLException {

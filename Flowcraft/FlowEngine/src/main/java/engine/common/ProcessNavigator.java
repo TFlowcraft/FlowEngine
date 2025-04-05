@@ -16,7 +16,6 @@ public class ProcessNavigator {
         this.elements = Collections.unmodifiableMap(elements);
     }
 
-    // Основные методы навигации
 
     public List<BpmnElement> getOutgoingElements(String elementId) {
         return resolveElementReferences(elementId, true);
@@ -25,7 +24,7 @@ public class ProcessNavigator {
     public Optional<BpmnElement> getSingleOutgoingElement(String elementId) {
         List<BpmnElement> outgoing = getOutgoingElements(elementId);
         return outgoing.size() == 1
-                ? Optional.of(outgoing.get(0))
+                ? Optional.of(outgoing.getFirst())
                 : Optional.empty();
     }
 
@@ -41,8 +40,6 @@ public class ProcessNavigator {
     public List<BpmnElement> getIncomingElements(String elementId) {
         return resolveElementReferences(elementId, false);
     }
-
-    // Методы для работы со шлюзами
 
     public GatewayType getGatewayType(String gatewayId) {
         return getElementById(gatewayId)

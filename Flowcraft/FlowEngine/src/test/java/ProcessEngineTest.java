@@ -1,4 +1,3 @@
-import api.service.TaskService;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.ProcessEngine;
 import engine.common.TaskDelegate;
@@ -29,17 +28,10 @@ public class ProcessEngineTest {
         var instanceRepo = new ProcessInstanceRepository();
         try {
             ProcessEngine processEngine = new ProcessEngine.ProcessEngineConfigurator()
-                    .setBpmnProcessFile(processSchemePath)
-                    .setUserTaskImplementation(taskDelegates)
-                    .setEngineQueue(queue)
-                    .setPoolSize(10)
-                    .setProcessInstanceRepository(instanceRepo)
-                    .setTaskRepository(new TaskRepository())
+                    .useDefaults(processSchemePath, taskDelegates)
                     .build();
             processEngine.start();
-            ProcessPoller poller = new ProcessPoller(queue, new TaskRepository(), new ScheduledThreadPoolExecutor(100));
-            poller.start();
-           // processEngine.createProcessInstance(null);
+            processEngine.createProcessInstance(null);
             var instance = service.getAll("");
             for (var task : instance) {
                 System.out.println(task.toString());

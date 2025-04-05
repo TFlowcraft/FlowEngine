@@ -3,9 +3,11 @@ package engine;
 import api.controller.ControllerSetup;
 import api.controller.impl.HistoryController;
 import api.controller.impl.ProcessInstanceController;
+import api.controller.impl.TaskController;
 import api.service.HistoryService;
 import api.service.ProcessInfoService;
 import api.service.ProcessInstanceService;
+import api.service.TaskService;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
@@ -51,7 +53,7 @@ public class ProcessEngine {
 
     public void createProcessInstance(JSONB businessData) {
         UUID id = processInstanceRepository.createNew(businessData);
-        var startEvent = processNavigator.findElementByType("startEvent").get();
+        var startEvent = processNavigator.findElementByType("startEvent").orElseThrow();
         var outputEvent = processNavigator.getOutgoingElements(startEvent.getId());
         for (var el : outputEvent) {
             taskRepository.createTaskForInstance(id, el.getId());
@@ -60,17 +62,24 @@ public class ProcessEngine {
 
     public void shutdown() {
         app.stop();
+        processPoller.stopPolling();
+        taskExecutor.shutdown();
+        DatabaseConfig.closeDataSource();
     }
 
     public void start() {
         processPoller.start();
         taskExecutor.start();
+        System.out.println("Starting process engine");
     }
 
     public TaskExecutor getTaskExecutor() {
         return taskExecutor;
     }
 
+    public Map<String, BpmnElement> getBpmnProcess() {
+        return bpmnProcess;
+    }
 
     public static class ProcessEngineConfigurator {
         private InputStream inputStream;
@@ -120,7 +129,7 @@ public class ProcessEngine {
             return this;
         }
 
-        private Javalin createEngineAPI(int port, ControllerSetup ... controllers) {
+        private Javalin startApiServer(int port, ControllerSetup ... controllers) {
             Javalin app = Javalin.create().start(port);
             for (var controller : controllers) {
                 controller.registerEndpoints(app);
@@ -129,18 +138,46 @@ public class ProcessEngine {
             return app;
         }
 
+        private void validate() {
+            if (inputStream == null) throw new IllegalStateException("BPMN file must be set");
+            if (dbUrl == null || dbUser == null || dbPassword == null)
+                throw new IllegalStateException("Database configuration must be set");
+            if (userTaskImplementation == null)
+                throw new IllegalStateException("Task delegates must be set");
+        }
+
+        public ProcessEngineConfigurator useDefaults(String bpmnFilePath, List<TaskDelegate> taskDelegates) {
+            this.inputStream = getClass().getResourceAsStream(bpmnFilePath);
+            if (this.inputStream == null) {
+                throw new IllegalArgumentException("BPMN file not found at: " + bpmnFilePath);
+            }
+
+            this.userTaskImplementation = taskDelegates;
+            this.dbUrl = "jdbc:postgresql://localhost:5432/process_engine";
+            this.dbUser = "postgres";
+            this.dbPassword = "postgres";
+            this.poolSize = 10;
+            this.retriesAmount = 5;
+            this.processTaskAmount = 100;
+            this.port = 8080;
+            return this;
+        }
+
+
         public ProcessEngine build() throws ParserConfigurationException, IOException, SAXException {
+            validate();
             DatabaseConfig.setupConfig(dbUrl, dbUser, dbPassword);
             var parserResult = BpmnParser.parseFile(inputStream, userTaskImplementation);
             var engineQueue = new ArrayBlockingQueue<InstanceTasks>(processTaskAmount);
             var taskRepository = new TaskRepository();
             var processInstanceRepository = new ProcessInstanceRepository();
             ProcessPoller processPoller = new ProcessPoller(engineQueue, taskRepository, new ScheduledThreadPoolExecutor(poolSize));
-            TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount);
-            HistoryController ControllerHistory = new HistoryController(new HistoryService(new HistoryRepository()));
-            ProcessInstanceController ControllerProcessInstance = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
+            TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount, new ProcessNavigator(parserResult.elements()));
+            HistoryController historyController = new HistoryController(new HistoryService(new HistoryRepository()));
+            ProcessInstanceController processInstanceController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
                     new ProcessInfoService(new ProcessInfoRepository()));
-            Javalin app = createEngineAPI(port, ControllerHistory, ControllerProcessInstance);
+            TaskController taskController = new TaskController(new TaskService(taskRepository, parserResult.elements()));
+            Javalin app = startApiServer(port, historyController, processInstanceController, taskController);
             return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor,app);
         }
     }

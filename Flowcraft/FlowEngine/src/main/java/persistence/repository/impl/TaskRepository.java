@@ -2,6 +2,8 @@ package persistence.repository.impl;
 
 import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 
+import com.database.entity.generated.tables.ProcessInfo;
+import com.database.entity.generated.tables.ProcessInstance;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import com.database.entity.generated.tables.records.InstanceTasksRecord;
 import org.jooq.DSLContext;
@@ -10,7 +12,6 @@ import org.jooq.UpdateSetFirstStep;
 import org.jooq.UpdateSetMoreStep;
 import org.jooq.impl.DSL;
 import persistence.DatabaseConfig;
-import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 
 import java.sql.Connection;
 import java.time.OffsetDateTime;
@@ -24,12 +25,6 @@ public class TaskRepository  {
         this.context = DatabaseConfig.getContext();
     }
 
-
-    public void create(InstanceTasks record) {
-        //record.store();
-    }
-
-
     public InstanceTasks getById(String name, UUID id) {
         return context
                 .selectFrom(INSTANCE_TASKS)
@@ -37,22 +32,43 @@ public class TaskRepository  {
                 .fetchOneInto(InstanceTasks.class);
     }
 
+    public static InstanceTasks createRetryTask(InstanceTasks task, OffsetDateTime startedAt) {
+        return new InstanceTasks(
+                task.getId(),
+                task.getInstanceId(),
+                task.getBpmnElementId(),
+                "PENDING",
+                startedAt,
+                null,
+                task.getCurrentRetriesAmount() + 1
+        );
+    }
+
+    public static InstanceTasks createFailedTask(InstanceTasks task, OffsetDateTime startedAt) {
+        return new InstanceTasks(
+                task.getId(),
+                task.getInstanceId(),
+                task.getBpmnElementId(),
+                "FAILED",
+                startedAt,
+                OffsetDateTime.now(),
+                task.getCurrentRetriesAmount()
+        );
+    }
 
     public List<InstanceTasks> getAll(String name) {
         return context.selectFrom(INSTANCE_TASKS).fetchInto(InstanceTasks.class);
     }
 
-
-    public void delete(UUID id) {
-        context
-                .deleteFrom(INSTANCE_TASKS)
-                .where(INSTANCE_TASKS.ID.eq(id))
-                .execute();
+    public List<InstanceTasks> getAll(String processName, UUID instanceId) {
+        return context
+                .select(INSTANCE_TASKS.fields())
+                .from(INSTANCE_TASKS)
+                .join(ProcessInstance.PROCESS_INSTANCE).on(ProcessInstance.PROCESS_INSTANCE.ID.eq(INSTANCE_TASKS.INSTANCE_ID))
+                .join(ProcessInfo.PROCESS_INFO).on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
+                .fetchInto(InstanceTasks.class);
     }
 
-    public void update(InstanceTasks record) {
-        //record.update();
-    }
 
     public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int batchSize) {
         return context
@@ -71,14 +87,54 @@ public class TaskRepository  {
                 .fetchInto(com.database.entity.generated.tables.pojos.InstanceTasks.class);
     }
 
+//    public void createTaskForInstance(UUID id, String elementId) {
+//        InstanceTasksRecord record = context.newRecord(INSTANCE_TASKS);
+//        record.setInstanceId(id);
+//        record.setBpmnElementId(elementId);
+//        record.setStatus("PENDING");
+//        record.setCurrentRetriesAmount(0);
+//        record.store();
+//    }
+
     public void createTaskForInstance(UUID id, String elementId) {
-        InstanceTasksRecord record = context.newRecord(INSTANCE_TASKS);
-        record.setInstanceId(id);
-        record.setBpmnElementId(elementId);
-        record.setStatus("PENDING");
-        record.setCurrentRetriesAmount(0);
-        record.store();
+        boolean exists = context.fetchExists(
+                context.selectFrom(INSTANCE_TASKS)
+                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(id))
+                        .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
+        );
+
+        if (!exists) {
+            InstanceTasksRecord record = context.newRecord(INSTANCE_TASKS);
+            record.setInstanceId(id);
+            record.setBpmnElementId(elementId);
+            record.setStatus("PENDING");
+            record.setCurrentRetriesAmount(0);
+            record.store();
+        } else {
+            System.out.println("Task already exists for instance " + id + " and element " + elementId);
+        }
     }
+
+    public void createTaskForInstance(UUID id, String elementId, Connection connection) {
+        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
+        boolean exists = dsl.fetchExists(
+                context.selectFrom(INSTANCE_TASKS)
+                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(id))
+                        .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
+        );
+
+        if (!exists) {
+            InstanceTasksRecord record = dsl.newRecord(INSTANCE_TASKS);
+            record.setInstanceId(id);
+            record.setBpmnElementId(elementId);
+            record.setStatus("PENDING");
+            record.setCurrentRetriesAmount(0);
+            record.store();
+        } else {
+            System.out.println("Task already exists for instance " + id + " and element " + elementId);
+        }
+    }
+
 
     public void updateTask(com.database.entity.generated.tables.pojos.InstanceTasks newTask) {
         context.update(INSTANCE_TASKS)

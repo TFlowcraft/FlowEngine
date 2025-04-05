@@ -33,7 +33,7 @@ public class ProcessInstanceRepository {
         return context
                 .select(PROCESS_INSTANCE.fields())
                 .from(PROCESS_INSTANCE)
-                .rightJoin(ProcessInfo.PROCESS_INFO)  // Используем rightJoin, если нужно все записи из ProcessInfo
+                .join(ProcessInfo.PROCESS_INFO)
                 .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
                 .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
                 .and(PROCESS_INSTANCE.ID.eq(instanceId))
@@ -44,7 +44,7 @@ public class ProcessInstanceRepository {
         return context
                 .select(PROCESS_INSTANCE.fields())
                 .from(PROCESS_INSTANCE)
-                .rightJoin(ProcessInfo.PROCESS_INFO)  // Используем rightJoin, если нужно все записи из ProcessInfo
+                .join(ProcessInfo.PROCESS_INFO)
                 .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
                 .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
                 .fetchInto(ProcessInstance.class);

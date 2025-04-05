@@ -241,3 +241,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /process/{processName}/instance/{instanceId}/task:
+    get:
+      summary: Tasks info
+      description: Return info about all task's for instance
+      parameters:
+        - name: instanceId
+          in: path
+          description: Process instance ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: processName
+          in: path
+          description: Process name
+          required: true
+          schema:
+            type: string
+            example: "BuyingProcess or Process3"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskHistory"
+        '400':
+          description: Invalid UUID format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        '404':
+          description: Instance not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

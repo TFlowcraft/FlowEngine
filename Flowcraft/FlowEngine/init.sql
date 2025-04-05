@@ -46,7 +46,7 @@ CREATE TABLE instance_history (
     timestamp TIMESTAMPTZ
 );
 
-
+--Добавить триггер для истории если меняется retry_amount?
 -- Индексы instance_history
 CREATE INDEX idx_instance_history_instance_id ON instance_history (instance_id);
 CREATE INDEX idx_instance_history_task_id ON instance_history (task_id);

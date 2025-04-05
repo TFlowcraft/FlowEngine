@@ -14,6 +14,7 @@ import engine.common.TaskDelegate;
 import engine.executor.TaskExecutor;
 import engine.model.BpmnElement;
 import engine.parser.BpmnParser;
+import io.github.cdimascio.dotenv.Dotenv;
 import io.javalin.Javalin;
 import org.jooq.JSONB;
 import org.xml.sax.SAXException;
@@ -151,11 +152,15 @@ public class ProcessEngine {
             if (this.inputStream == null) {
                 throw new IllegalArgumentException("BPMN file not found at: " + bpmnFilePath);
             }
+            Dotenv dotenv = Dotenv.load();
+            String dbUrl = dotenv.get("DB_URL");
+            String dbUser = dotenv.get("DB_USER");
+            String dbPassword = dotenv.get("DB_PASSWORD");
 
             this.userTaskImplementation = taskDelegates;
-            this.dbUrl = "jdbc:postgresql://localhost:5432/process_engine";
-            this.dbUser = "postgres";
-            this.dbPassword = "postgres";
+            this.dbUrl = dbUrl != null ? dbUrl : "jdbc:postgresql://localhost:5432/process_engine";
+            this.dbUser = dbUser != null ? dbUser : "postgres";
+            this.dbPassword = dbPassword != null ? dbPassword : "postgres";
             this.poolSize = 10;
             this.retriesAmount = 5;
             this.processTaskAmount = 100;

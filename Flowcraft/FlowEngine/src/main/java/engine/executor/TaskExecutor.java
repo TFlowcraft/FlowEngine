@@ -3,6 +3,7 @@ package engine.executor;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
+import engine.model.BpmnElement;
 import engine.model.ExecutionContext;
 import org.jooq.JSONB;
 import persistence.TransactionManager;
@@ -11,10 +12,15 @@ import persistence.repository.impl.TaskRepository;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLOutput;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import static persistence.repository.impl.TaskRepository.createFailedTask;
 import static persistence.repository.impl.TaskRepository.createRetryTask;
@@ -22,6 +28,8 @@ import static persistence.repository.impl.TaskRepository.createRetryTask;
 //TODO Добавить нормальный переход на создание следующей таски
 // Посмотреть где и как обработать ошибки
 // Подумать, что делать с retry и где его запускать
+/// ПОПРАВЬ ПАРСЕР, СДЕЛАЙ enum ДЛЯ ТИПОВ И СТАТУСА, ИЗБАВЬСЯ ОТ БОЛИ В ПОПЕ (task, serviceTask etc,
+/// gateway, parallelgateway, parallelGateway etc) их боялись даже хуй знает кто
 public class TaskExecutor {
     private final BlockingQueue<InstanceTasks> taskQueue;
     private final ExecutorService executor;
@@ -74,19 +82,49 @@ public class TaskExecutor {
         * if bpmnElementId.get() == gateway then we check IN task status and if they completed, we create OUT tasks
         * but, we need to wait or retry task if IN tasks are not completed
          */
-        TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
-        if (userImpl == null) {
-            handleMissingImplementation(task);
-            return;
+        String elementType = processNavigator.getElementTypeById(task.getBpmnElementId()).toLowerCase();
+        if (elementType.contains("gateway")) {
+            processGateway(task, elementType);
+        } else {
+            TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
+            if (userImpl == null) {
+                handleMissingImplementation(task);
+                return;
+            }
+            try {
+                userImpl.execute(new ExecutionContext(task,
+                        processInstanceRepository.getBusinessData(task.getInstanceId())));
+                handleTaskSuccess(task, startedAt);
+            } catch (Exception e) {
+                //here we do retry and rollback's
+                handleTaskFailure(task, userImpl, startedAt, e);
+            }
         }
-        try {
-            userImpl.execute(new ExecutionContext(task,
-                    processInstanceRepository.getBusinessData(task.getInstanceId())));
-            handleTaskSuccess(task, startedAt);
-        } catch (Exception e) {
-            //here we do retry and rollback's
-            handleTaskFailure(task, userImpl, startedAt, e);
+    }
+
+    private void processGateway(InstanceTasks task, String elementType) throws SQLException {
+        var incoming = processNavigator.getIncomingElements(task.getBpmnElementId())
+                .stream()
+                .map(bpmnElement -> bpmnElement.getId().toLowerCase())
+                .toList();
+        var statuses = taskRepository.getTasksStatusByInstanceId(task.getInstanceId(), incoming);
+        if (statuses.contains("PENDING") || statuses.contains("RUNNING") || statuses.contains("FAILED")) {
+            System.out.println("bebebe");
+        } else {
+            if (elementType.equals("parallelGateway")) {
+                var outgoing = processNavigator.getOutgoingElements(task.getBpmnElementId());
+                for (var out : outgoing) {
+                    taskRepository.createTaskForInstance(task.getInstanceId(), out.getId());
+                }
+            }
+            if (elementType.equals("exclusiveGateway")) {
+                checkConditions();
+                //call to check conditions
+            }
         }
+    }
+
+    private void checkConditions() {
     }
 
     private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {

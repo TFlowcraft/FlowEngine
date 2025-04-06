@@ -15,8 +15,8 @@ import persistence.DatabaseConfig;
 
 import java.sql.Connection;
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class TaskRepository  {
     private final DSLContext context;
@@ -68,6 +68,21 @@ public class TaskRepository  {
                 .join(ProcessInfo.PROCESS_INFO).on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
                 .fetchInto(InstanceTasks.class);
     }
+
+    public List<String> getTasksStatusByInstanceId(UUID instanceId, List<String> elementsId) {
+       if (elementsId == null || elementsId.isEmpty()) {
+           return Collections.emptyList();
+       }
+       return context.selectFrom(INSTANCE_TASKS)
+               .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
+               .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
+               .fetchInto(InstanceTasks.class)
+               .stream()
+               .filter(Objects::nonNull)
+               .map(InstanceTasks::getStatus)
+               .toList();
+    }
+
 
 
     public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int batchSize) {

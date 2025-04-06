@@ -11,11 +11,11 @@ class BpmnParserTest {
     private Map<String, BpmnElement> parsedElements;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/processWithName.bpmn"})
+    @ValueSource(strings = {"/diagramTestWithGates.bpmn"})
     public void parseScheme(String path) {
         try {
             var list = new ArrayList<TaskDelegate>();
-            for (int i = 0 ; i < 1 ; i++) {
+            for (int i = 0 ; i < 5 ; i++) {
                 list.add(new TaskDelegate() {
                     @Override
                     public void execute(ExecutionContext context) {

@@ -112,7 +112,7 @@ public final class BpmnParser {
     }
 
     private static boolean isTaskElement(Element element) {
-        String localName = element.getLocalName();
+        String localName = element.getLocalName().toLowerCase();
         return localName.contains("task");
     }
 

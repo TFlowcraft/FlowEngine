@@ -83,9 +83,14 @@ public class ProcessNavigator {
                 .orElse(Collections.emptyList());
     }
 
-    private Optional<BpmnElement> getElementById(String elementId) {
+    public Optional<BpmnElement> getElementById(String elementId) {
         return Optional.ofNullable(elements.get(elementId));
     }
+
+    public String getElementTypeById(String elementId) {
+        return  getElementById(elementId).isPresent() ? getElementById(elementId).get().getType() : null;
+    }
+
 
 
 }

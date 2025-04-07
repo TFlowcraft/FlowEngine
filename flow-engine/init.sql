@@ -25,7 +25,7 @@ CREATE INDEX idx_process_instance_business_data ON process_instance USING GIN (b
 CREATE TABLE instance_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     instance_id UUID REFERENCES process_instance(id) ON DELETE CASCADE,
-    bpmn_element_id VARCHAR(255),
+    bpmn_element_id TEXT,
     status VARCHAR(50) CHECK (status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')),
     start_time TIMESTAMPTZ,
     end_time TIMESTAMPTZ,
@@ -35,6 +35,7 @@ CREATE TABLE instance_tasks (
 -- Индексы instance_tasks
 CREATE INDEX idx_instance_tasks_instance_id ON instance_tasks (instance_id);
 CREATE INDEX idx_instance_tasks_bpmn_element_id ON instance_tasks (bpmn_element_id);
+
 
 -- instance_history
 CREATE TABLE instance_history (
@@ -60,10 +61,8 @@ BEGIN
     IF OLD.status IS DISTINCT FROM NEW.status THEN
         INSERT INTO instance_history (instance_id, task_id, task_status, timestamp)
         VALUES (NEW.instance_id, NEW.id, NEW.status, NOW());
-END IF;
-
     -- Лог, если FAILED
-    IF NEW.status = 'FAILED' THEN
+    ELSIF NEW.status = 'FAILED' THEN
         INSERT INTO instance_history (instance_id, task_id, task_status, error_stacktrace, timestamp)
         VALUES (NEW.instance_id, NEW.id, NEW.status, NEW.error_stacktrace, NOW());
 END IF;

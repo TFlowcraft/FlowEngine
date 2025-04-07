@@ -52,7 +52,7 @@ public class ProcessEngine {
         this.app = app;
     }
 
-    public void createProcessInstance(JSONB businessData) {
+    public void createProcessInstance(Map<String, Object> businessData) {
         UUID id = processInstanceRepository.createNew(businessData);
         var startEvent = processNavigator.findElementByType("startEvent").orElseThrow();
         var outputEvent = processNavigator.getOutgoingElements(startEvent.getId());

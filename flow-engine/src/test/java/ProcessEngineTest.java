@@ -6,8 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class ProcessEngineTest {
 
@@ -20,7 +19,11 @@ public class ProcessEngineTest {
                     .useDefaults(processSchemePath, taskDelegates)
                     .build();
             processEngine.start();
-           // processEngine.createProcessInstance(null);
+            Map<String, Object> data = new HashMap<>();
+            data.put("string-name", "john");
+            data.put("int-age", 30);
+            data.put("map-friends-name", List.of("Bob", "John", "Alice", "Kate"));
+            processEngine.createProcessInstance(data);
             while (true) {
                 //
             }
@@ -31,42 +34,53 @@ public class ProcessEngineTest {
 
     }
 
-//    @ParameterizedTest
-//    @ValueSource(strings = {"/diagram.bpmn"})
-//    public void createAndRunEngine(String processSchemePath) throws ParserConfigurationException, IOException, SAXException {
-//        ProcessEngine engine = new ProcessEngine.ProcessEngineConfigurator()
-//                .setBpmnProcessFile(processSchemePath)
-//                .setEngineQueue(new ArrayBlockingQueue<InstanceTasks>(100))
-//                .setPoolSize(100)
-//                .setTaskRepository(new TaskRepository())
-//                .setRetriesAmount(10)
-//                .setProcessInstanceRepository(new ProcessInstanceRepository())
-//                .build();
-//    }
     @NotNull
     private static List<TaskDelegate> getTaskDelegates() {
         List<TaskDelegate> taskDelegates = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            int finalI = i;
-            taskDelegates.add(new TaskDelegate() {
-                @Override
-                public void execute(ExecutionContext context) {
-                    System.out.printf("Executing task %d \n", finalI);
-                    for (int j = 0; j < 1_000_000_00; j++) {
+        taskDelegates.add(new TaskDelegate() {
 
-                    }
+            @Override
+            public void execute(ExecutionContext context) {
+                System.out.println("Executing task 1");
+                var name = context.getDataField("string-name");
+                System.out.printf("Data field value: %s\n", name);
+            }
+
+            @Override
+            public void rollback(ExecutionContext context) {
+                System.out.println("Rollback task 1");
+            }
+        });
+        taskDelegates.add(new TaskDelegate() {
+
+            @Override
+            public void execute(ExecutionContext context) {
+                System.out.println("Executing task 2");
+                var age = context.getDataField("int-age");
+                System.out.printf("Data field value: %s\n", age);
+            }
+
+            @Override
+            public void rollback(ExecutionContext context) {
+                System.out.println("Rollback task 2");
+            }
+        });
+        taskDelegates.add(new TaskDelegate() {
+
+            @Override
+            public void execute(ExecutionContext context) {
+                System.out.println("Executing task 1");
+                List<Object> name = Collections.singletonList(context.getDataField("map-friends-name"));
+                for (Object object : name) {
+                    System.out.printf("Data field value: %s\n", object);
                 }
+            }
 
-                @Override
-                public void rollback(ExecutionContext context) {
-
-                    System.out.printf("Rollback task %d \n", finalI);
-                    for (int j = 0; j < 1_000_000_00; j++) {
-
-                    }
-                }
-            });
-        }
+            @Override
+            public void rollback(ExecutionContext context) {
+                System.out.println("Rollback task 1");
+            }
+        });
         return taskDelegates;
     }
 }

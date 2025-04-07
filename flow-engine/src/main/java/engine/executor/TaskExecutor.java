@@ -1,12 +1,8 @@
 package engine.executor;
 
 import com.database.entity.generated.tables.pojos.InstanceTasks;
-import engine.common.ProcessNavigator;
-import engine.common.Status;
-import engine.common.TaskDelegate;
+import engine.common.*;
 import engine.model.BpmnElement;
-import engine.common.ExecutionContext;
-import org.jooq.JSONB;
 import persistence.TransactionManager;
 import persistence.repository.impl.ProcessInstanceRepository;
 import persistence.repository.impl.TaskRepository;
@@ -16,8 +12,6 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -65,7 +59,7 @@ public class TaskExecutor {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (SQLException e) {
-                //Подумать куда ее сунуть
+                //Подумать куда ее сунуть (Когда-нибудь избавиться от printStackTrace)
                 e.printStackTrace();
             }
         }
@@ -84,7 +78,8 @@ public class TaskExecutor {
             }
             try {
                 userImpl.execute(new ExecutionContext(task,
-                        processInstanceRepository.getBusinessData(task.getInstanceId())));
+                        JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId()))
+                ));
                 handleTaskSuccess(task, startedAt);
             } catch (Exception e) {
                 handleTaskFailure(task, userImpl, startedAt, e);
@@ -102,7 +97,13 @@ public class TaskExecutor {
             If we're working with small process, try use offer() method or some construction to guarantee adding element
             Or change status to "PENDING" and give work to poller
 
-            P.S. "exclusiveGateway" currently unsupported*/
+            P.S. "exclusiveGateway" currently unsupported
+            В общем, концепция такая (на понятийном?):
+                1) Суем назад в очередь для повторной обработки TaskExecutor-ом (это плохо, можем потерять задачу)
+                2) Меняем ей статус снова на PENDING, чтобы ProcessPoller снова достал ее и положил в очередь
+
+                Возможно придумать для этого установку стратегии того как мы будет работать с тасками и отдать
+                пользователь возможность выбрать стратегию обработки*/
             taskQueue.add(task);
         } else {
             TransactionManager.executeInTransaction(connection -> {
@@ -124,6 +125,9 @@ public class TaskExecutor {
     private void createNextTasks(InstanceTasks task, Connection connection) {
         List<BpmnElement> outgoingElements = processNavigator.getOutgoingElements(task.getBpmnElementId());
         for (var element : outgoingElements) {
+            //Ну и в будущем тут переделать на использование с ENUM ибо это кошмар работать со String
+            //Ибо оно по факту может и в виде EndEvent прилететь сюда и в lowercase, и вообще не еби мозги
+            //сделай enum (это уже к parser и BpmnElement)
             if (element.getType().equals("endEvent")) {
                 processInstanceRepository.updateInstanceEndTimeIfNull(task.getInstanceId(),OffsetDateTime.now(), connection);
             } else {
@@ -151,25 +155,21 @@ public class TaskExecutor {
                 }
             });
             if (userImpl != null) {
-                performRollback(userImpl, task, processInstanceRepository.getBusinessData(task.getInstanceId()));
+                performRollback(userImpl, task, JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId())));
             }
         } catch (Exception e) {
             //Подумать че тут, наверное еще rollback остальных вызвать
-            rollbackCompletedTasks();
             e.printStackTrace();
         }
     }
 
-    private void rollbackCompletedTasks() {
-
-    }
 
     private boolean shouldRetry(InstanceTasks task) {
         return task.getCurrentRetriesAmount() < RETRIES_AMOUNT;
     }
 
 
-    private void performRollback(TaskDelegate userImpl, InstanceTasks task, JSONB businessData) {
+    private void performRollback(TaskDelegate userImpl, InstanceTasks task, Map<String, Object> businessData) {
         userImpl.rollback(new ExecutionContext(task, businessData));
     }
 

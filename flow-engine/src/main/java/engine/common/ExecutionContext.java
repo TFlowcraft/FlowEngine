@@ -2,107 +2,87 @@ package engine.common;
 
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
-import java.util.Map;
 import org.jooq.JSONB;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ExecutionContext {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final InstanceTasks instanceTask;
-    private JSONB businessData;
+    private final ConcurrentHashMap<String, Object> businessData;
 
-    public ExecutionContext(InstanceTasks instanceTask, JSONB businessData) {
+    public ExecutionContext(InstanceTasks instanceTask, Map<String, Object> businessData) {
         this.instanceTask = instanceTask;
-        this.businessData = businessData != null ? businessData : JSONB.valueOf("{}");
-    }
-
-    public JSONB getBusinessData() {
-        return businessData;
-    }
-
-    public void setBusinessData(JSONB businessData) {
-        this.businessData = businessData != null ? businessData : JSONB.valueOf("{}");
-    }
-
-    public InstanceTasks getInstanceTask() {
-        return instanceTask;
-    }
-
-    public Object getDataField(String key) {
-        try {
-            Map<String, Object> dataMap = OBJECT_MAPPER.readValue(
-                    businessData.data(),
-                    new TypeReference<Map<String, Object>>() {}
-            );
-            return dataMap.get(key);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error reading business data field: " + key, e);
+        this.businessData = new ConcurrentHashMap<>();
+        if (businessData != null) {
+            this.businessData.putAll(businessData);
         }
     }
 
+    // Получить значение по ключу
+    public Object getDataField(String key) {
+        return businessData.get(key);
+    }
+
+    // Получить значение с приведением типа
     public <T> T getDataField(String key, Class<T> type) {
-        Object value = getDataField(key);
+        Object value = businessData.get(key);
         return type.isInstance(value) ? type.cast(value) : null;
     }
 
+    // Добавить или обновить поле
     public void putDataField(String key, Object value) {
-        try {
-            Map<String, Object> dataMap = getBusinessDataAsMap();
-            dataMap.put(key, value);
-            updateBusinessData(dataMap);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error updating business data field: " + key, e);
-        }
+        if (key == null) throw new IllegalArgumentException("Key cannot be null");
+        businessData.put(key, value);
     }
 
+    // Удалить поле
     public void removeDataField(String key) {
-        try {
-            Map<String, Object> dataMap = getBusinessDataAsMap();
-            dataMap.remove(key);
-            updateBusinessData(dataMap);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error removing business data field: " + key, e);
-        }
+        businessData.remove(key);
     }
 
+    // Проверить наличие поля
     public boolean containsDataField(String key) {
-        try {
-            return getBusinessDataAsMap().containsKey(key);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error checking business data field: " + key, e);
+        return businessData.containsKey(key);
+    }
+
+    // Объединить с другой мапой данных
+    public void mergeData(Map<String, Object> additionalData) {
+        if (additionalData != null) {
+            businessData.putAll(additionalData);
         }
     }
 
-    public void mergeData(JSONB additionalData) {
-        try {
-            Map<String, Object> currentData = getBusinessDataAsMap();
-            Map<String, Object> newData = OBJECT_MAPPER.readValue(
-                    additionalData.data(),
-                    new TypeReference<Map<String, Object>>() {}
-            );
-
-            currentData.putAll(newData);
-            updateBusinessData(currentData);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error merging business data", e);
-        }
-    }
-
+    // Очистить все данные
     public void clearData() {
-        this.businessData = JSONB.valueOf("{}");
+        businessData.clear();
     }
 
-    public Map<String, Object> getBusinessDataAsMap() throws JsonProcessingException {
-        return businessData != null
-                ? OBJECT_MAPPER.readValue(businessData.data(), new TypeReference<Map<String, Object>>() {})
-                : new HashMap<>();
+    // Получить данные как неизменяемую мапу
+    public Map<String, Object> getBusinessDataAsMap() {
+        return Collections.unmodifiableMap(businessData);
     }
 
-    private void updateBusinessData(Map<String, Object> dataMap) throws JsonProcessingException {
-        this.businessData = JSONB.valueOf(
-                OBJECT_MAPPER.writeValueAsString(dataMap)
-        );
+    // Получить данные в формате JSONB
+    public JSONB getBusinessDataAsJsonb() {
+        try {
+            return JSONB.valueOf(JsonUtils.OBJECT_MAPPER.writeValueAsString(businessData));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize business data", e);
+        }
+    }
+
+    // Обновить данные из JSONB (например, после изменений в БД)
+    public void updateBusinessDataFromJsonb(JSONB json) {
+        Map<String, Object> newData = JsonUtils.fromJsonb(json);
+        businessData.clear();
+        if (newData != null) {
+            businessData.putAll(newData);
+        }
+    }
+
+    // Получить задачу, связанную с контекстом
+    public InstanceTasks getInstanceTask() {
+        return instanceTask;
     }
 }

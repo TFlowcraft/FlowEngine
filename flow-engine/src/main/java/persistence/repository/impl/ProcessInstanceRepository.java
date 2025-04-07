@@ -6,13 +6,12 @@ import static com.database.entity.generated.tables.ProcessInstance.PROCESS_INSTA
 import com.database.entity.generated.tables.ProcessInfo;
 import com.database.entity.generated.tables.pojos.ProcessInstance;
 import com.database.entity.generated.tables.records.ProcessInstanceRecord;
+import engine.common.JsonUtils;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import java.sql.Connection;
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class ProcessInstanceRepository {
     private final DSLContext context;
@@ -20,12 +19,6 @@ public class ProcessInstanceRepository {
     public ProcessInstanceRepository(DSLContext context) {
         this.context = context;
     }
-
-
-    public void create(ProcessInstance record) {
-       // record.store();
-    }
-
 
     public ProcessInstance getById(String processName, UUID instanceId) {
         return context
@@ -48,33 +41,13 @@ public class ProcessInstanceRepository {
                 .fetchInto(ProcessInstance.class);
     }
 
-
-    public void delete(UUID id) {
-        context
-                .deleteFrom(PROCESS_INSTANCE)
-                .where(PROCESS_INSTANCE.ID.eq(id))
-                .execute();
+    public UUID createNew(Map<String, Object> businessData) {
+        ProcessInstanceRecord processInstanceRecord = context.newRecord(PROCESS_INSTANCE);
+        processInstanceRecord.setBusinessData(JsonUtils.toJsonb(businessData));
+        processInstanceRecord.setStartedAt(OffsetDateTime.now());
+        processInstanceRecord.store();
+        return processInstanceRecord.getId();
     }
-
-    public void update(ProcessInstance record) {
-        //record.update();
-    }
-
-
-    public UUID createNew(JSONB businessData) {
-        ProcessInstanceRecord record = context.newRecord(PROCESS_INSTANCE);
-        record.setBusinessData(businessData);
-        record.setStartedAt(OffsetDateTime.now());
-        record.store();
-        return record.getId();
-    }
-
-//    public Optional<OffsetDateTime> getProcessInstanceEndTimeById(UUID processInstanceId, Connection connection) {
-//        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
-//        return dsl.select(PROCESS_INSTANCE.COMPLETED_AT)
-//                .where(PROCESS_INSTANCE.PROCESS_ID.eq(processInstanceId))
-//                .fetchOptionalInto(OffsetDateTime.class);
-//    }
 
     public void updateInstance(UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
         updateInstance(context, id, businessData, startedAt, endedAt);

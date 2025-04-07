@@ -1,0 +1,84 @@
+plugins {
+    id 'java'
+    id 'nu.studer.jooq' version '9.0'
+}
+
+group = 'com.tbank'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.jooq:jooq:3.20.2'
+    implementation 'org.jooq:jooq-meta:3.20.2'
+    implementation 'org.jooq:jooq-codegen:3.20.2'
+    implementation 'org.postgresql:postgresql:42.7.3'
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+    implementation 'io.javalin:javalin:6.5.0'
+    implementation 'io.github.cdimascio:dotenv-java:2.2.0'
+    implementation("org.slf4j:slf4j-simple:2.0.16")
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.18.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
+
+    jooqGenerator 'org.postgresql:postgresql:42.7.3'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+def generatedJooqDir = layout.buildDirectory.dir("generated/jooq")
+
+jooq {
+    version = '3.20.2'
+    configurations {
+        main {
+            generationTool {
+                logging = org.jooq.meta.jaxb.Logging.WARN
+                jdbc {
+                    driver = 'org.postgresql.Driver'
+                    url = 'jdbc:postgresql://localhost:5432/process_engine'
+                    user = 'postgres'
+                    password = 'postgres'
+                }
+                generator {
+                    name = 'org.jooq.codegen.JavaGenerator'
+                    database {
+                        name = 'org.jooq.meta.postgres.PostgresDatabase'
+                        inputSchema = 'public'
+                    }
+                    generate {
+                        relations = true
+                        deprecated = false
+                        records = true
+                        immutablePojos = true
+                        fluentSetters = true
+                    }
+                    target {
+                        packageName = 'com.database.entity.generated'
+                        directory = generatedJooqDir.get().asFile.absoluteFile
+                    }
+                }
+            }
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += generatedJooqDir.get().asFile
+        }
+    }
+}
+
+tasks.named("compileJava").configure {
+    dependsOn("generateJooq")
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,28 +1,28 @@
 package persistence.repository.impl;
 
 import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
+import static org.jooq.impl.DSL.count;
 
 import com.database.entity.generated.tables.ProcessInfo;
 import com.database.entity.generated.tables.ProcessInstance;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import com.database.entity.generated.tables.records.InstanceTasksRecord;
+import engine.common.Status;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.UpdateSetFirstStep;
 import org.jooq.UpdateSetMoreStep;
 import org.jooq.impl.DSL;
-import persistence.DatabaseConfig;
-
 import java.sql.Connection;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
+
 
 public class TaskRepository  {
     private final DSLContext context;
 
-    public TaskRepository() {
-        this.context = DatabaseConfig.getContext();
+    public TaskRepository(DSLContext context) {
+        this.context = context;
     }
 
     public InstanceTasks getById(String name, UUID id) {
@@ -32,28 +32,41 @@ public class TaskRepository  {
                 .fetchOneInto(InstanceTasks.class);
     }
 
-    public static InstanceTasks createRetryTask(InstanceTasks task, OffsetDateTime startedAt) {
+    //TODO Тут надо в history stacktrace добавить, поглядеть как это сделать
+    public static InstanceTasks createRetryTask(InstanceTasks task, OffsetDateTime startedAt, Exception exception) {
         return new InstanceTasks(
                 task.getId(),
                 task.getInstanceId(),
                 task.getBpmnElementId(),
-                "PENDING",
+                Status.PENDING,
                 startedAt,
                 null,
                 task.getCurrentRetriesAmount() + 1
         );
     }
 
-    public static InstanceTasks createFailedTask(InstanceTasks task, OffsetDateTime startedAt) {
+    public static InstanceTasks createFailedTask(InstanceTasks task, OffsetDateTime startedAt, Exception exception) {
         return new InstanceTasks(
                 task.getId(),
                 task.getInstanceId(),
                 task.getBpmnElementId(),
-                "FAILED",
+                Status.FAILED,
                 startedAt,
                 OffsetDateTime.now(),
                 task.getCurrentRetriesAmount()
         );
+    }
+
+    public int getCompletedTasksForInstance(UUID instanceId, UUID taskId, List<String> elementsId) {
+        return context
+                .select(count())
+                .from(INSTANCE_TASKS)
+                .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
+                .and(INSTANCE_TASKS.ID.eq(taskId))
+                .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
+                .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
+                .fetchOptionalInto(Integer.class)
+                .orElse(0);
     }
 
     public List<InstanceTasks> getAll(String name) {
@@ -69,7 +82,7 @@ public class TaskRepository  {
                 .fetchInto(InstanceTasks.class);
     }
 
-    public List<String> getTasksStatusByInstanceId(UUID instanceId, List<String> elementsId) {
+    public List<Status> getTasksStatusByInstanceId(UUID instanceId, List<String> elementsId) {
        if (elementsId == null || elementsId.isEmpty()) {
            return Collections.emptyList();
        }
@@ -83,17 +96,15 @@ public class TaskRepository  {
                .toList();
     }
 
-
-
     public List<com.database.entity.generated.tables.pojos.InstanceTasks> fetchAndLockTasks(int batchSize) {
         return context
                 .update(INSTANCE_TASKS)
-                .set(INSTANCE_TASKS.STATUS, "RUNNING")
+                .set(INSTANCE_TASKS.STATUS, Status.RUNNING)
                 .where(INSTANCE_TASKS.ID.in(
                         context
                                 .select(INSTANCE_TASKS.ID)
                                 .from(INSTANCE_TASKS)
-                                .where(INSTANCE_TASKS.STATUS.eq("PENDING"))
+                                .where(INSTANCE_TASKS.STATUS.eq(Status.PENDING))
                                 .orderBy(INSTANCE_TASKS.START_TIME.asc())
                                 .limit(batchSize)
                                 .forUpdate().skipLocked()
@@ -102,54 +113,38 @@ public class TaskRepository  {
                 .fetchInto(com.database.entity.generated.tables.pojos.InstanceTasks.class);
     }
 
-//    public void createTaskForInstance(UUID id, String elementId) {
-//        InstanceTasksRecord record = context.newRecord(INSTANCE_TASKS);
-//        record.setInstanceId(id);
-//        record.setBpmnElementId(elementId);
-//        record.setStatus("PENDING");
-//        record.setCurrentRetriesAmount(0);
-//        record.store();
-//    }
+    public void createTaskForInstance(UUID instanceId, String elementId) {
+        createTaskForInstance(instanceId, elementId, null);
+    }
 
-    public void createTaskForInstance(UUID id, String elementId) {
-        boolean exists = context.fetchExists(
-                context.selectFrom(INSTANCE_TASKS)
-                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(id))
-                        .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
-        );
+    public void createTaskForInstance(UUID instanceId, String elementId, Connection connection) {
+        DSLContext dsl = connection != null
+                ? DSL.using(connection, SQLDialect.POSTGRES)
+                : context;
+
+        boolean exists = checkTaskExists(instanceId, elementId, dsl);
 
         if (!exists) {
-            InstanceTasksRecord record = context.newRecord(INSTANCE_TASKS);
-            record.setInstanceId(id);
-            record.setBpmnElementId(elementId);
-            record.setStatus("PENDING");
-            record.setCurrentRetriesAmount(0);
-            record.store();
-        } else {
-            System.out.println("Task already exists for instance " + id + " and element " + elementId);
+            createNewTaskRecord(instanceId, elementId, dsl);
         }
     }
 
-    public void createTaskForInstance(UUID id, String elementId, Connection connection) {
-        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
-        boolean exists = dsl.fetchExists(
-                context.selectFrom(INSTANCE_TASKS)
-                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(id))
+    private boolean checkTaskExists(UUID instanceId, String elementId, DSLContext dsl) {
+        return dsl.fetchExists(
+                dsl.selectFrom(INSTANCE_TASKS)
+                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
                         .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
         );
-
-        if (!exists) {
-            InstanceTasksRecord record = dsl.newRecord(INSTANCE_TASKS);
-            record.setInstanceId(id);
-            record.setBpmnElementId(elementId);
-            record.setStatus("PENDING");
-            record.setCurrentRetriesAmount(0);
-            record.store();
-        } else {
-            System.out.println("Task already exists for instance " + id + " and element " + elementId);
-        }
     }
 
+    private void createNewTaskRecord(UUID instanceId, String elementId, DSLContext dsl) {
+        InstanceTasksRecord record = dsl.newRecord(INSTANCE_TASKS);
+        record.setInstanceId(instanceId);
+        record.setBpmnElementId(elementId);
+        record.setStatus(Status.PENDING);
+        record.setCurrentRetriesAmount(0);
+        record.store();
+    }
 
     public void updateTask(com.database.entity.generated.tables.pojos.InstanceTasks newTask) {
         context.update(INSTANCE_TASKS)
@@ -167,16 +162,16 @@ public class TaskRepository  {
         updateTask(dsl, task.getId(), task.getStatus(), task.getStartTime(), task.getEndTime(), task.getCurrentRetriesAmount());
     }
 
-    public void updateTask(UUID id, String status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
+    public void updateTask(UUID id, Status status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
         updateTask(context, id, status, startTime, endTime, currentRetriesAmount);
     }
 
-    public void updateTask(Connection connection, UUID id, String status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
+    public void updateTask(Connection connection, UUID id, Status status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
         DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
         updateTask(dsl, id,  status, startTime, endTime, currentRetriesAmount);
     }
 
-    private void updateTask(DSLContext dsl, UUID id, String status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
+    private void updateTask(DSLContext dsl, UUID id, Status status, OffsetDateTime startTime, OffsetDateTime endTime, Integer currentRetriesAmount) {
         UpdateSetFirstStep<InstanceTasksRecord> updateStep = dsl.update(INSTANCE_TASKS);
         UpdateSetMoreStep<InstanceTasksRecord> update = null;
 

@@ -1,7 +1,6 @@
 package api.service;
 
 import com.database.entity.generated.tables.pojos.ProcessInstance;
-import org.jooq.XML;
 import persistence.repository.impl.ProcessInstanceRepository;
 
 import java.util.List;

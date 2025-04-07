@@ -1,8 +1,6 @@
 package persistence;
 
-import org.jooq.DSLContext;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -18,6 +16,7 @@ public final class TransactionManager {
         } catch (Exception e) {
             if (conn != null) {
                 conn.rollback();
+                throw e;
             }
         } finally {
             if (conn != null) {

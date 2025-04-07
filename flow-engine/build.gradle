@@ -1,13 +1,15 @@
 plugins {
     id 'java'
     id 'nu.studer.jooq' version '9.0'
+    id 'maven-publish'
 }
 
-group = 'com.tbank'
+group = 'com.github.flowengine'
 version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
@@ -49,6 +51,14 @@ jooq {
                     database {
                         name = 'org.jooq.meta.postgres.PostgresDatabase'
                         inputSchema = 'public'
+                        forcedTypes = [
+                                new org.jooq.meta.jaxb.ForcedType()
+                                        .withName("VARCHAR")
+                                        .withUserType("engine.common.Status")
+                                        .withConverter("engine.model.StatusBinding")
+                                        .withIncludeExpression("status")
+                                        .withIncludeTypes(".*")
+                        ]
                     }
                     generate {
                         relations = true
@@ -81,4 +91,25 @@ tasks.named("compileJava").configure {
 
 test {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'Flow Engine'
+                description = 'Business process orchestrator engine'
+                url = 'https://github.com/TFlowcraft/FlowEngine'
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            // Для тестирования можно опубликовать в локальный Maven репозиторий
+            url = uri("file://${buildDir}/repos")  // Публикация в локальную папку для тестов
+        }
+    }
 }

@@ -16,6 +16,25 @@ components:
           type: string
       required: [message]
 
+    ProcessInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        process_name:
+          type: string
+          example: "Buying process"
+        bpmn_file:
+          type: string
+          example: |
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+
+            </bpmn:definitions>
+          
+
+
     ProcessInstance:
       type: object
       properties:
@@ -59,6 +78,35 @@ components:
           example: "2023-10-01T13:00:00Z"
 
 paths:
+  /process/info:
+    get:
+      summary: List of all processes
+      description: info about all created processes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessInfo"
+        '400':
+          description: Invalid UUID format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        '404':
+          description: Process instance not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /process/{processName}/diagram:
     get:
       summary: Workflow diagram

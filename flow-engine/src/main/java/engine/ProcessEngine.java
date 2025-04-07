@@ -2,12 +2,10 @@ package engine;
 
 import api.controller.ControllerSetup;
 import api.controller.impl.HistoryController;
+import api.controller.impl.ProcessController;
 import api.controller.impl.ProcessInstanceController;
 import api.controller.impl.TaskController;
-import api.service.HistoryService;
-import api.service.ProcessInfoService;
-import api.service.ProcessInstanceService;
-import api.service.TaskService;
+import api.service.*;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
@@ -16,6 +14,7 @@ import engine.model.BpmnElement;
 import engine.parser.BpmnParser;
 import io.github.cdimascio.dotenv.Dotenv;
 import io.javalin.Javalin;
+import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.xml.sax.SAXException;
 import persistence.DatabaseConfig;
@@ -30,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 public class ProcessEngine {
@@ -92,6 +92,7 @@ public class ProcessEngine {
         private String dbUrl;
         private String dbUser;
         private String dbPassword;
+        private String serverApiUrl;
 
         public ProcessEngineConfigurator setBpmnProcessFile(String bpmnFile) {
             inputStream = getClass().getResourceAsStream(bpmnFile);
@@ -130,12 +131,16 @@ public class ProcessEngine {
             return this;
         }
 
-        private Javalin startApiServer(int port, ControllerSetup ... controllers) {
+        public ProcessEngineConfigurator setServerApiUrl(String serverApiUrl) {
+            this.serverApiUrl = serverApiUrl;
+            return this;
+        }
+
+        private Javalin startApiServer(ControllerSetup ... controllers) {
             Javalin app = Javalin.create().start(port);
             for (var controller : controllers) {
                 controller.registerEndpoints(app);
             }
-            System.out.printf("Server started on http://localhost:%d\n", port);
             return app;
         }
 
@@ -168,22 +173,31 @@ public class ProcessEngine {
             return this;
         }
 
+        private Javalin initializeEngineApi(DSLContext context, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, Map<String, BpmnElement> bpmnProcess) {
+            HistoryController historyController = new HistoryController(new HistoryService(new HistoryRepository(context)));
+            ProcessInfoRepository processInfoRepository = new ProcessInfoRepository(context);
+            ProcessInstanceController processInstanceController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
+                    new ProcessInfoService(processInfoRepository));
+            ProcessController processController = new ProcessController(new ProcessService(processInfoRepository));
+            TaskController taskController = new TaskController(new TaskService(taskRepository, bpmnProcess));
+            return startApiServer(historyController, processInstanceController, taskController, processController);
+        }
+
 
         public ProcessEngine build() throws ParserConfigurationException, IOException, SAXException {
             validate();
             DatabaseConfig.setupConfig(dbUrl, dbUser, dbPassword);
+            DSLContext context = DatabaseConfig.getContext();
             var parserResult = BpmnParser.parseFile(inputStream, userTaskImplementation);
-            var engineQueue = new ArrayBlockingQueue<InstanceTasks>(processTaskAmount);
-            var taskRepository = new TaskRepository();
-            var processInstanceRepository = new ProcessInstanceRepository();
+            BlockingQueue<InstanceTasks> engineQueue = new ArrayBlockingQueue<>(processTaskAmount);
+            TaskRepository taskRepository = new TaskRepository(context);
+            ProcessInstanceRepository processInstanceRepository = new ProcessInstanceRepository(context);
             ProcessPoller processPoller = new ProcessPoller(engineQueue, taskRepository, new ScheduledThreadPoolExecutor(poolSize));
             TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount, new ProcessNavigator(parserResult.elements()));
-            HistoryController historyController = new HistoryController(new HistoryService(new HistoryRepository()));
-            ProcessInstanceController processInstanceController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
-                    new ProcessInfoService(new ProcessInfoRepository()));
-            TaskController taskController = new TaskController(new TaskService(taskRepository, parserResult.elements()));
-            Javalin app = startApiServer(port, historyController, processInstanceController, taskController);
-            return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor,app);
+            Javalin app = initializeEngineApi(context, processInstanceRepository, taskRepository, parserResult.elements());
+            return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor, app);
         }
+
+
     }
 }

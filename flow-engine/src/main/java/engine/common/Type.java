@@ -1,4 +1,4 @@
-package engine.model;
+package engine.common;
 
 public enum Type {
     TASK,

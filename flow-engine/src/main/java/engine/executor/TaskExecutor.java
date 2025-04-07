@@ -2,9 +2,10 @@ package engine.executor;
 
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.common.ProcessNavigator;
+import engine.common.Status;
 import engine.common.TaskDelegate;
 import engine.model.BpmnElement;
-import engine.model.ExecutionContext;
+import engine.common.ExecutionContext;
 import org.jooq.JSONB;
 import persistence.TransactionManager;
 import persistence.repository.impl.ProcessInstanceRepository;
@@ -12,24 +13,16 @@ import persistence.repository.impl.TaskRepository;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.SQLOutput;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import static persistence.repository.impl.TaskRepository.createFailedTask;
 import static persistence.repository.impl.TaskRepository.createRetryTask;
 
-//TODO Добавить нормальный переход на создание следующей таски
-// Посмотреть где и как обработать ошибки
-// Подумать, что делать с retry и где его запускать
-/// ПОПРАВЬ ПАРСЕР, СДЕЛАЙ enum ДЛЯ ТИПОВ И СТАТУСА, ИЗБАВЬСЯ ОТ БОЛИ В ПОПЕ (task, serviceTask etc,
-/// gateway, parallelgateway, parallelGateway etc) их боялись даже хуй знает кто
+
 public class TaskExecutor {
     private final BlockingQueue<InstanceTasks> taskQueue;
     private final ExecutorService executor;
@@ -70,6 +63,7 @@ public class TaskExecutor {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (SQLException e) {
+                //Подумать куда ее сунуть
                 e.printStackTrace();
             }
         }
@@ -77,11 +71,6 @@ public class TaskExecutor {
 
     private void processTask(InstanceTasks task) throws SQLException {
         OffsetDateTime startedAt = OffsetDateTime.now();
-        /*check what we are exec
-        * if bpmnElementId.get() == task then we use userImpl and exec
-        * if bpmnElementId.get() == gateway then we check IN task status and if they completed, we create OUT tasks
-        * but, we need to wait or retry task if IN tasks are not completed
-         */
         String elementType = processNavigator.getElementTypeById(task.getBpmnElementId()).toLowerCase();
         if (elementType.contains("gateway")) {
             processGateway(task, elementType);
@@ -96,55 +85,47 @@ public class TaskExecutor {
                         processInstanceRepository.getBusinessData(task.getInstanceId())));
                 handleTaskSuccess(task, startedAt);
             } catch (Exception e) {
-                //here we do retry and rollback's
                 handleTaskFailure(task, userImpl, startedAt, e);
             }
         }
     }
 
     private void processGateway(InstanceTasks task, String elementType) throws SQLException {
-        var incoming = processNavigator.getIncomingElements(task.getBpmnElementId())
-                .stream()
-                .map(bpmnElement -> bpmnElement.getId().toLowerCase())
-                .toList();
-        var statuses = taskRepository.getTasksStatusByInstanceId(task.getInstanceId(), incoming);
-        if (statuses.contains("PENDING") || statuses.contains("RUNNING") || statuses.contains("FAILED")) {
-            System.out.println("bebebe");
-        } else {
-            if (elementType.equals("parallelGateway")) {
-                var outgoing = processNavigator.getOutgoingElements(task.getBpmnElementId());
-                for (var out : outgoing) {
-                    taskRepository.createTaskForInstance(task.getInstanceId(), out.getId());
-                }
-            }
-            if (elementType.equals("exclusiveGateway")) {
-                checkConditions();
-                //call to check conditions
-            }
-        }
-    }
+        List<String> incomingElementsId = processNavigator.getIncomingElementsId(task.getBpmnElementId());
+        int completedTaskAmount = taskRepository.getCompletedTasksForInstance(task.getInstanceId(), task.getId(), incomingElementsId);
+        if (completedTaskAmount != incomingElementsId.size()) {
+            /*Bad practice, we can lose task if queue is full
+            If we're working with small process, try use offer() method or some construction to guarantee adding element
+            Or change status to "PENDING" and give work to poller
 
-    private void checkConditions() {
+            P.S. "exclusiveGateway" currently unsupported*/
+            taskQueue.add(task);
+        } else {
+            TransactionManager.executeInTransaction(connection -> {
+                createNextTasks(task, connection);
+            });
+
+        }
     }
 
     private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {
         TransactionManager.executeInTransaction(connection -> {
             taskRepository.updateTask(connection, task.getId(),
-                    "SUCCESS",startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
-            createNextTask(task, connection);
+                    Status.COMPLETED,startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
+            createNextTasks(task, connection);
         });
     }
 
-    private void createNextTask(InstanceTasks task, Connection connection) {
-        processNavigator.getOutgoingElements(task.getBpmnElementId())
-                .forEach(element ->  {
-                    if (element.getType().equals("endEvent")) {
-                        processInstanceRepository.updateInstance(connection, task.getInstanceId(),null, null, OffsetDateTime.now());
-                    } else {
-                        taskRepository.createTaskForInstance(task.getInstanceId(),
-                                element.getId(), connection);
-                    }
-                });
+    //Maybe create method with function interface for multiple creation with or without condition
+    private void createNextTasks(InstanceTasks task, Connection connection) {
+        List<BpmnElement> outgoingElements = processNavigator.getOutgoingElements(task.getBpmnElementId());
+        for (var element : outgoingElements) {
+            if (element.getType().equals("endEvent")) {
+                processInstanceRepository.updateInstance(connection, task.getInstanceId(),null, null, OffsetDateTime.now());
+            } else {
+                taskRepository.createTaskForInstance(task.getInstanceId(), element.getId(), connection);
+            }
+        }
     }
 
     private void handleTaskFailure(InstanceTasks task,
@@ -154,11 +135,11 @@ public class TaskExecutor {
         try {
             TransactionManager.executeInTransaction(connection -> {
                 InstanceTasks updatedTask = shouldRetry(task)
-                        ? createRetryTask(task, startedAt)
-                        : createFailedTask(task, startedAt);
+                        ? createRetryTask(task, startedAt, exception)
+                        : createFailedTask(task, startedAt, exception);
 
                 if (!shouldRetry(task)) {
-                    taskRepository.updateTask(connection, updatedTask.getId(), "FAIL", null, OffsetDateTime.now(), null);
+                    taskRepository.updateTask(connection, updatedTask);
                     processInstanceRepository.updateInstance(connection, task.getInstanceId(), null, null, OffsetDateTime.now());
                 } else {
                     taskRepository.updateTask(connection, updatedTask);
@@ -169,8 +150,14 @@ public class TaskExecutor {
                 performRollback(userImpl, task, processInstanceRepository.getBusinessData(task.getInstanceId()));
             }
         } catch (Exception e) {
+            //Подумать че тут, наверное еще rollback остальных вызвать
+            rollbackCompletedTasks();
             e.printStackTrace();
         }
+    }
+
+    private void rollbackCompletedTasks() {
+
     }
 
     private boolean shouldRetry(InstanceTasks task) {
@@ -184,9 +171,9 @@ public class TaskExecutor {
 
     private void handleMissingImplementation(InstanceTasks task) throws SQLException {
         TransactionManager.executeInTransaction(connection -> {
-            OffsetDateTime endedAt = OffsetDateTime.now();
-            processInstanceRepository.updateInstance(null, null, null, endedAt);
-            taskRepository.updateTask(connection, task.getId(), "FAILED",  null, endedAt, null);
+            OffsetDateTime endAt = OffsetDateTime.now();
+            processInstanceRepository.updateInstance(connection, null, null, null, endAt);
+            taskRepository.updateTask(connection, task.getId(), Status.FAILED,  null, endAt, null);
         });
     }
 

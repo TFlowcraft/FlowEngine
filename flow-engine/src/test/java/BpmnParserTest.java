@@ -1,6 +1,6 @@
 import engine.common.TaskDelegate;
 import engine.model.BpmnElement;
-import engine.model.ExecutionContext;
+import engine.common.ExecutionContext;
 import engine.parser.BpmnParser;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

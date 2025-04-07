@@ -1,7 +1,5 @@
 package engine.parser;
 
-
-
 import engine.common.TaskDelegate;
 import engine.model.BpmnElement;
 import engine.model.FlowInfo;

@@ -1,4 +1,4 @@
-package engine.model;
+package engine.common;
 
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import com.fasterxml.jackson.core.JsonProcessingException;

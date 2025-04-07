@@ -1,8 +1,6 @@
 package engine.common;
 
 import engine.model.BpmnElement;
-import engine.parser.BpmnParser.BpmnParseResult;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +37,13 @@ public class ProcessNavigator {
 
     public List<BpmnElement> getIncomingElements(String elementId) {
         return resolveElementReferences(elementId, false);
+    }
+
+    public List<String> getIncomingElementsId(String elementId) {
+        return getIncomingElements(elementId)
+                .stream()
+                .map(bpmnElement -> bpmnElement.getId().toLowerCase())
+                .toList();
     }
 
     public GatewayType getGatewayType(String gatewayId) {

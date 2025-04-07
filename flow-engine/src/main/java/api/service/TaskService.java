@@ -1,14 +1,13 @@
 package api.service;
 
 import api.dto.TaskDto;
-import com.database.entity.generated.tables.pojos.InstanceTasks;
 import engine.model.BpmnElement;
 import persistence.repository.impl.TaskRepository;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
+
 
 public class TaskService {
     TaskRepository taskRepository;

@@ -8,9 +8,6 @@ import com.database.entity.generated.tables.pojos.ProcessInstance;
 import com.database.entity.generated.tables.records.ProcessInstanceRecord;
 import org.jooq.*;
 import org.jooq.impl.DSL;
-import org.jooq.impl.QOM;
-import persistence.DatabaseConfig;
-
 import java.sql.Connection;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -19,8 +16,8 @@ import java.util.UUID;
 public class ProcessInstanceRepository {
     private final DSLContext context;
 
-    public ProcessInstanceRepository() {
-        this.context = DatabaseConfig.getContext();
+    public ProcessInstanceRepository(DSLContext context) {
+        this.context = context;
     }
 
 

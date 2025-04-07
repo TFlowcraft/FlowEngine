@@ -1,15 +1,17 @@
 package api.dto;
 
+import engine.common.Status;
+
 import java.time.OffsetDateTime;
 
 public class TaskDto {
     private String bpmnElementId;
     private String taskName;
-    private String status;
+    private Status status;
     private OffsetDateTime startTime;
     private OffsetDateTime endTime;
 
-    public TaskDto(String bpmnElementId, String taskName, String status, OffsetDateTime startTime, OffsetDateTime endTime) {
+    public TaskDto(String bpmnElementId, String taskName, Status status, OffsetDateTime startTime, OffsetDateTime endTime) {
         this.bpmnElementId = bpmnElementId;
         this.taskName = taskName;
         this.status = status;
@@ -33,11 +35,11 @@ public class TaskDto {
         this.taskName = taskName;
     }
 
-    public String getStatus() {
+    public Status getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 

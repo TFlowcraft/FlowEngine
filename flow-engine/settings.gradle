@@ -1,2 +1,3 @@
 rootProject.name = 'flow-engine'
+include 'flow-engine-spring-boot-starter'
 

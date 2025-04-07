@@ -11,6 +11,7 @@ import org.jooq.impl.DSL;
 import java.sql.Connection;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ProcessInstanceRepository {
@@ -68,6 +69,13 @@ public class ProcessInstanceRepository {
         return record.getId();
     }
 
+//    public Optional<OffsetDateTime> getProcessInstanceEndTimeById(UUID processInstanceId, Connection connection) {
+//        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
+//        return dsl.select(PROCESS_INSTANCE.COMPLETED_AT)
+//                .where(PROCESS_INSTANCE.PROCESS_ID.eq(processInstanceId))
+//                .fetchOptionalInto(OffsetDateTime.class);
+//    }
+
     public void updateInstance(UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
         updateInstance(context, id, businessData, startedAt, endedAt);
     }
@@ -75,6 +83,15 @@ public class ProcessInstanceRepository {
     public void updateInstance(Connection connection, UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
         DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
         updateInstance(dsl, id, businessData, startedAt, endedAt);
+    }
+
+    public void updateInstanceEndTimeIfNull(UUID id, OffsetDateTime endedAt, Connection connection) {
+        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
+        dsl.update(PROCESS_INSTANCE)
+                .set(PROCESS_INSTANCE.COMPLETED_AT, endedAt)
+                .where(PROCESS_INSTANCE.ID.eq(id)
+                .and(PROCESS_INSTANCE.COMPLETED_AT.isNull()))
+                .execute();
     }
 
     private void updateInstance(DSLContext dsl, UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {

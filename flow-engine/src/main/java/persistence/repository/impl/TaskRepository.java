@@ -117,34 +117,48 @@ public class TaskRepository  {
         createTaskForInstance(instanceId, elementId, null);
     }
 
+//    public void createTaskForInstance(UUID instanceId, String elementId, Connection connection) {
+//        DSLContext dsl = connection != null
+//                ? DSL.using(connection, SQLDialect.POSTGRES)
+//                : context;
+//
+//        boolean exists = checkTaskExists(instanceId, elementId, dsl);
+//
+//        if (!exists) {
+//            createNewTaskRecord(instanceId, elementId, dsl);
+//        }
+//    }
+
     public void createTaskForInstance(UUID instanceId, String elementId, Connection connection) {
         DSLContext dsl = connection != null
                 ? DSL.using(connection, SQLDialect.POSTGRES)
                 : context;
 
-        boolean exists = checkTaskExists(instanceId, elementId, dsl);
-
-        if (!exists) {
-            createNewTaskRecord(instanceId, elementId, dsl);
-        }
+        dsl.insertInto(INSTANCE_TASKS)
+                .set(INSTANCE_TASKS.INSTANCE_ID, instanceId)
+                .set(INSTANCE_TASKS.BPMN_ELEMENT_ID, elementId)
+                .set(INSTANCE_TASKS.STATUS, Status.PENDING)
+                .set(INSTANCE_TASKS.CURRENT_RETRIES_AMOUNT, 0)
+                .onConflictDoNothing()
+                .execute();
     }
 
-    private boolean checkTaskExists(UUID instanceId, String elementId, DSLContext dsl) {
-        return dsl.fetchExists(
-                dsl.selectFrom(INSTANCE_TASKS)
-                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
-                        .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
-        );
-    }
+//    private boolean checkTaskExists(UUID instanceId, String elementId, DSLContext dsl) {
+//        return dsl.fetchExists(
+//                dsl.selectFrom(INSTANCE_TASKS)
+//                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
+//                        .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
+//        );
+//    }
 
-    private void createNewTaskRecord(UUID instanceId, String elementId, DSLContext dsl) {
-        InstanceTasksRecord record = dsl.newRecord(INSTANCE_TASKS);
-        record.setInstanceId(instanceId);
-        record.setBpmnElementId(elementId);
-        record.setStatus(Status.PENDING);
-        record.setCurrentRetriesAmount(0);
-        record.store();
-    }
+//    private void createNewTaskRecord(UUID instanceId, String elementId, DSLContext dsl) {
+//        InstanceTasksRecord record = dsl.newRecord(INSTANCE_TASKS);
+//        record.setInstanceId(instanceId);
+//        record.setBpmnElementId(elementId);
+//        record.setStatus(Status.PENDING);
+//        record.setCurrentRetriesAmount(0);
+//        record.store();
+//    }
 
     public void updateTask(com.database.entity.generated.tables.pojos.InstanceTasks newTask) {
         context.update(INSTANCE_TASKS)

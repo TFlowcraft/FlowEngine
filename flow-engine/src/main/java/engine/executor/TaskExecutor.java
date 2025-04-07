@@ -16,6 +16,8 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -90,6 +92,8 @@ public class TaskExecutor {
         }
     }
 
+
+
     private void processGateway(InstanceTasks task, String elementType) throws SQLException {
         List<String> incomingElementsId = processNavigator.getIncomingElementsId(task.getBpmnElementId());
         int completedTaskAmount = taskRepository.getCompletedTasksForInstance(task.getInstanceId(), task.getId(), incomingElementsId);
@@ -121,7 +125,7 @@ public class TaskExecutor {
         List<BpmnElement> outgoingElements = processNavigator.getOutgoingElements(task.getBpmnElementId());
         for (var element : outgoingElements) {
             if (element.getType().equals("endEvent")) {
-                processInstanceRepository.updateInstance(connection, task.getInstanceId(),null, null, OffsetDateTime.now());
+                processInstanceRepository.updateInstanceEndTimeIfNull(task.getInstanceId(),OffsetDateTime.now(), connection);
             } else {
                 taskRepository.createTaskForInstance(task.getInstanceId(), element.getId(), connection);
             }

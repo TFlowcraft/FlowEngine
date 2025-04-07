@@ -50,6 +50,8 @@ CREATE TABLE instance_history (
 -- Индексы instance_history
 CREATE INDEX idx_instance_history_instance_id ON instance_history (instance_id);
 CREATE INDEX idx_instance_history_task_id ON instance_history (task_id);
+CREATE UNIQUE INDEX instance_tasks_instance_element_uniq
+    ON instance_tasks (instance_id, bpmn_element_id);
 
 -- Функция триггера
 CREATE OR REPLACE FUNCTION log_task_status_change()

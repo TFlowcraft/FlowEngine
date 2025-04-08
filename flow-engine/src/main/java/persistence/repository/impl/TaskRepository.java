@@ -93,10 +93,14 @@ public class TaskRepository  {
 
     public List<InstanceTasks> getAll(String processName, UUID instanceId) {
         return context
-                .select(INSTANCE_TASKS.fields())
+                .selectDistinct(INSTANCE_TASKS.fields())
                 .from(INSTANCE_TASKS)
-                .join(ProcessInstance.PROCESS_INSTANCE).on(ProcessInstance.PROCESS_INSTANCE.ID.eq(INSTANCE_TASKS.INSTANCE_ID))
-                .join(ProcessInfo.PROCESS_INFO).on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
+                .join(ProcessInstance.PROCESS_INSTANCE)
+                .on(ProcessInstance.PROCESS_INSTANCE.ID.eq(INSTANCE_TASKS.INSTANCE_ID))
+                .join(ProcessInfo.PROCESS_INFO)
+                .on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
+                .where(ProcessInstance.PROCESS_INSTANCE.ID.eq(instanceId))
+                .and(ProcessInfo.PROCESS_INFO.PROCESS_NAME.eq(processName))
                 .fetchInto(InstanceTasks.class);
     }
 

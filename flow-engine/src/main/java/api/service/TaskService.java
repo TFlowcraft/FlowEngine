@@ -26,7 +26,9 @@ public class TaskService {
                         getTaskName(task.getBpmnElementId()),
                         task.getStatus(),
                         task.getStartTime(),
-                        task.getEndTime()
+                        task.getEndTime(),
+                        task.getInstanceId(),
+                        task.getId()
                 ))
                 .toList();
      }

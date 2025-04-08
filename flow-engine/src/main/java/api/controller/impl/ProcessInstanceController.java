@@ -35,11 +35,9 @@ public class ProcessInstanceController implements ControllerSetup {
     private void getProcessInstanceById(Context ctx) {
         try {
             String processName = ctx.pathParam("processName");
-            var sId = ctx.pathParam("id");
-            System.out.println(sId);
-            UUID id = UUID.fromString(sId);
+            UUID processInstanceId = UUID.fromString(ctx.pathParam("id"));
 
-            var instance = processInstanceService.getProcessInstanceById(processName, id);
+            var instance = processInstanceService.getProcessInstanceById(processName, processInstanceId);
             Response.ok(ctx, instance);
 
         } catch (IllegalArgumentException e) {

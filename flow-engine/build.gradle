@@ -93,11 +93,8 @@ sourceSets {
 tasks.register('sourcesJar', Jar) {
     archiveClassifier.set('sources')
     from sourceSets.main.allSource
-}
-
-tasks.named('sourcesJar').configure {
-    dependsOn('generateJooq')
-    from(generatedJooqDir)
+    from(generatedJooqDir.get().asFile)  // Добавляем директорию с сгенерированными файлами JOOQ
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE  // Исключаем дубли
 }
 
 tasks.named('compileJava').configure {

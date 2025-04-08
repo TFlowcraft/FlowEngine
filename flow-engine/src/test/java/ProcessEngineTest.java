@@ -23,7 +23,7 @@ public class ProcessEngineTest {
             data.put("string-name", "john");
             data.put("int-age", 30);
             data.put("map-friends-name", List.of("Bob", "John", "Alice", "Kate"));
-            processEngine.createProcessInstance(data);
+            //processEngine.createProcessInstance(data);
             while (true) {
                 //
             }

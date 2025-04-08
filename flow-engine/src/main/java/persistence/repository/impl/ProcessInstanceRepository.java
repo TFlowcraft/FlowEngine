@@ -26,7 +26,7 @@ public class ProcessInstanceRepository {
                 .from(PROCESS_INSTANCE)
                 .join(ProcessInfo.PROCESS_INFO)
                 .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
-                .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
+                .where(ProcessInfo.PROCESS_INFO.PROCESS_NAME.eq(processName))
                 .and(PROCESS_INSTANCE.ID.eq(instanceId))
                 .fetchOneInto(ProcessInstance.class);
     }
@@ -37,23 +37,23 @@ public class ProcessInstanceRepository {
                 .from(PROCESS_INSTANCE)
                 .join(ProcessInfo.PROCESS_INFO)
                 .on(PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
-                .where(ProcessInfo.PROCESS_INFO.PROCESSNAME.eq(processName))
+                .where(ProcessInfo.PROCESS_INFO.PROCESS_NAME.eq(processName))
                 .fetchInto(ProcessInstance.class);
     }
 
     public UUID createNew(Map<String, Object> businessData) {
         ProcessInstanceRecord processInstanceRecord = context.newRecord(PROCESS_INSTANCE);
-        processInstanceRecord.setBusinessData(JsonUtils.toJsonb(businessData));
+        processInstanceRecord.setBusinessData(businessData);
         processInstanceRecord.setStartedAt(OffsetDateTime.now());
         processInstanceRecord.store();
         return processInstanceRecord.getId();
     }
 
-    public void updateInstance(UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
+    public void updateInstance(UUID id, Map<String, Object> businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
         updateInstance(context, id, businessData, startedAt, endedAt);
     }
 
-    public void updateInstance(Connection connection, UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
+    public void updateInstance(Connection connection, UUID id, Map<String, Object> businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
         DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
         updateInstance(dsl, id, businessData, startedAt, endedAt);
     }
@@ -67,7 +67,7 @@ public class ProcessInstanceRepository {
                 .execute();
     }
 
-    private void updateInstance(DSLContext dsl, UUID id, JSONB businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
+    private void updateInstance(DSLContext dsl, UUID id, Map<String, Object> businessData, OffsetDateTime startedAt, OffsetDateTime endedAt) {
         UpdateQuery<ProcessInstanceRecord> query = dsl.updateQuery(PROCESS_INSTANCE);
 
         if (businessData != null) {
@@ -84,7 +84,7 @@ public class ProcessInstanceRepository {
         query.execute();
     }
 
-    public JSONB getBusinessData(UUID instanceId) {
+    public Map<String, Object> getBusinessData(UUID instanceId) {
         return  context
                 .select(PROCESS_INSTANCE.BUSINESS_DATA)
                 .from(PROCESS_INSTANCE)

@@ -18,7 +18,7 @@ public class ProcessInfoRepository {
         return context
                 .select(PROCESS_INFO.BPMN_FILE)
                 .from(PROCESS_INFO)
-                .where(PROCESS_INFO.PROCESSNAME.eq(name))
+                .where(PROCESS_INFO.PROCESS_NAME.eq(name))
                 .fetchOneInto(XML.class);
     }
 

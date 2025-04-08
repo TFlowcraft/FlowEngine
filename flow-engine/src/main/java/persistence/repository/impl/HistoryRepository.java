@@ -21,7 +21,7 @@ public class HistoryRepository {
                 .from(INSTANCE_HISTORY)
                 .join(PROCESS_INSTANCE).on(INSTANCE_HISTORY.INSTANCE_ID.eq(PROCESS_INSTANCE.ID))
                 .join(PROCESS_INFO).on(PROCESS_INSTANCE.PROCESS_ID.eq(PROCESS_INFO.ID))
-                .where(PROCESS_INFO.PROCESSNAME.eq(processName))
+                .where(PROCESS_INFO.PROCESS_NAME.eq(processName))
                 .and(PROCESS_INSTANCE.ID.eq(instanceId))
                 .and(INSTANCE_HISTORY.TASK_ID.eq(taskId))
                 .fetchInto(InstanceHistory.class);
@@ -36,7 +36,7 @@ public class HistoryRepository {
                 .from(INSTANCE_HISTORY)
                 .join(PROCESS_INSTANCE).on(INSTANCE_HISTORY.INSTANCE_ID.eq(PROCESS_INSTANCE.ID))
                 .join(PROCESS_INFO).on(PROCESS_INSTANCE.PROCESS_ID.eq(PROCESS_INFO.ID))
-                .where(PROCESS_INFO.PROCESSNAME.eq(processName))
+                .where(PROCESS_INFO.PROCESS_NAME.eq(processName))
                 .and(PROCESS_INSTANCE.ID.eq(instanceId))
                 .fetchInto(InstanceHistory.class);
     }

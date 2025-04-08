@@ -57,7 +57,12 @@ jooq {
                                         .withUserType("engine.common.Status")
                                         .withConverter("engine.model.StatusBinding")
                                         .withIncludeExpression("status")
-                                        .withIncludeTypes(".*")
+                                        .withIncludeTypes(".*"),
+                                new org.jooq.meta.jaxb.ForcedType()
+                                        .withName("JAVA_OBJECT")
+                                        .withUserType("java.util.Map<java.lang.String, java.lang.Object>")
+                                        .withConverter("engine.model.JsonbToMapConverter")
+                                        .withIncludeTypes("jsonb")
                         ]
                     }
                     generate {
@@ -85,12 +90,29 @@ sourceSets {
     }
 }
 
-tasks.named("compileJava").configure {
-    dependsOn("generateJooq")
+tasks.register('sourcesJar', Jar) {
+    archiveClassifier.set('sources')
+    from sourceSets.main.allSource
 }
+
+tasks.named('sourcesJar').configure {
+    dependsOn('generateJooq')
+    from(generatedJooqDir)
+}
+
+tasks.named('compileJava').configure {
+    dependsOn('generateJooq')
+}
+
+
 
 test {
     useJUnitPlatform()
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
 }
 
 publishing {
@@ -102,14 +124,38 @@ publishing {
                 name = 'Flow Engine'
                 description = 'Business process orchestrator engine'
                 url = 'https://github.com/TFlowcraft/FlowEngine'
+
+//                licenses {
+//                    license {
+//                        name = 'MIT License'
+//                        url = 'https://opensource.org/licenses/MIT'
+//                    }
+//                }
+
+                developers {
+                    developer {
+                        id = 'developer'
+                        name = 'Denis P.'
+                        email = 'dp.podzorov@gmail.com'
+                    }
+                }
+
+                scm {
+                    connection = 'scm:git:git://github.com/TFlowcraft/FlowEngine.git'
+                    developerConnection = 'scm:git:ssh://github.com/TFlowcraft/FlowEngine.git'
+                    url = 'https://github.com/TFlowcraft/FlowEngine'
+                }
             }
         }
     }
 
     repositories {
-        maven {
-            // Для тестирования можно опубликовать в локальный Maven репозиторий
-            url = uri("file://${buildDir}/repos")  // Публикация в локальную папку для тестов
-        }
+        mavenLocal()
+//        maven {
+//
+//            // Для тестирования можно опубликовать в локальный Maven репозиторий
+//           // url = uri("file://${buildDir}/repos")  // Публикация в локальную папку для тестов
+//        }
     }
+
 }

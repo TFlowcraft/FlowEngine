@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE process_info (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bpmn_process_id VARCHAR(255),
-    processName VARCHAR(100),
+    process_name VARCHAR(100),
     bpmn_file XML
 );
 

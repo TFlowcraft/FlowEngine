@@ -54,40 +54,27 @@ public class TaskExecutor {
     private void processQueue() {
         while (running.get()) {
             try {
-                InstanceTasks task = taskQueue.take();
-                processTask(task);
+                InstanceTasks task = taskQueue.poll(100, TimeUnit.MILLISECONDS);
+                if (task != null) {
+                    processTask(task);
+                } else {
+                    if (!running.get()) {
+                        break;
+                    }
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                break;
             } catch (SQLException e) {
-                //Подумать куда ее сунуть (Когда-нибудь избавиться от printStackTrace)
                 e.printStackTrace();
+
+                if (running.get()) {
+                    continue;
+                }
             }
         }
     }
 
-//    private void processTask(InstanceTasks task) throws SQLException {
-//        OffsetDateTime startedAt = OffsetDateTime.now();
-//        String elementType = processNavigator.getElementTypeById(task.getBpmnElementId()).toLowerCase();
-//        if (elementType.contains("gateway")) {
-//            processGateway(task, elementType);
-//        } else {
-//            TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
-//            if (userImpl == null) {
-//                handleMissingImplementation(task);
-//                return;
-//            }
-//            try {
-//                userImpl.execute(new ExecutionContext(task,
-//                        JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId()))
-//                ));
-//                handleTaskSuccess(task, startedAt);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//                handleTaskFailure(task, userImpl, startedAt, e);
-//            }
-//        }
-//
-//    }
     private void processTask(InstanceTasks task) throws SQLException {
         OffsetDateTime startedAt = OffsetDateTime.now();
         String elementType = processNavigator.getElementTypeById(task.getBpmnElementId()).toLowerCase();
@@ -136,7 +123,7 @@ public class TaskExecutor {
         }
 
         ExecutionContext context = new ExecutionContext(task,
-                JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId())));
+                processInstanceRepository.getBusinessData(task.getInstanceId()));
 
         userImpl.execute(context);
         completeTaskAndProceed(task, startedAt);
@@ -210,13 +197,13 @@ public class TaskExecutor {
 //        }
 //    }
 
-    private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {
-        TransactionManager.executeInTransaction(connection -> {
-            taskRepository.updateTask(connection, task.getId(),
-                    Status.COMPLETED, startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
-            createNextTasks(task, connection);
-        });
-    }
+//    private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {
+//        TransactionManager.executeInTransaction(connection -> {
+//            taskRepository.updateTask(connection, task.getId(),
+//                    Status.COMPLETED, startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
+//            createNextTasks(task, connection);
+//        });
+//    }
 
     //Maybe create method with function interface for multiple creation with or without condition
     private void createNextTasks(InstanceTasks task, Connection connection) {
@@ -253,7 +240,7 @@ public class TaskExecutor {
                 }
             });
             if (userImpl != null) {
-                performRollback(userImpl, task, JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId())));
+                performRollback(userImpl, task, processInstanceRepository.getBusinessData(task.getInstanceId()));
             }
         } catch (Exception e) {
             //Подумать че тут, наверное еще rollback остальных вызвать

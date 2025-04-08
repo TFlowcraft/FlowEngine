@@ -62,11 +62,29 @@ public class TaskRepository  {
                 .select(count())
                 .from(INSTANCE_TASKS)
                 .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
-                .and(INSTANCE_TASKS.ID.eq(taskId))
+                //.and(INSTANCE_TASKS.ID.eq(taskId))
                 .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
                 .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
                 .fetchOptionalInto(Integer.class)
                 .orElse(0);
+    }
+
+    public boolean areAllTasksCompleted(UUID instanceId, List<String> elementsId) {
+        if (elementsId.isEmpty()) {
+            throw new IllegalArgumentException("Elements list cannot be empty");
+        }
+
+        int totalElements = elementsId.size();
+
+        Integer completedCount = context
+                .select(count())
+                .from(INSTANCE_TASKS)
+                .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
+                .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
+                .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
+                .fetchOneInto(Integer.class);
+
+        return completedCount != null && completedCount == totalElements;
     }
 
     public List<InstanceTasks> getAll(String name) {
@@ -208,5 +226,20 @@ public class TaskRepository  {
         if (update != null) {
             update.where(INSTANCE_TASKS.ID.eq(id)).execute();
         }
+    }
+
+    public void updateStatus(UUID id, Status status) {
+        context.update(INSTANCE_TASKS)
+                .set(INSTANCE_TASKS.STATUS, status)
+                .where(INSTANCE_TASKS.ID.eq(id))
+                .execute();
+    }
+
+    public void updateStatus(Connection connection, UUID id, Status status) {
+        DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
+        dsl.update(INSTANCE_TASKS)
+                .set(INSTANCE_TASKS.STATUS, status)
+                .where(INSTANCE_TASKS.ID.eq(id))
+                .execute();
     }
 }

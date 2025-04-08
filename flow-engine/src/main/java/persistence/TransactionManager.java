@@ -14,10 +14,11 @@ public final class TransactionManager {
             operation.execute(conn);
             conn.commit();
         } catch (Exception e) {
+            e.printStackTrace();
             if (conn != null) {
                 conn.rollback();
-                throw e;
             }
+            throw e;
         } finally {
             if (conn != null) {
                 conn.close();

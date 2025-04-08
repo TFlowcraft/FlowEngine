@@ -65,58 +65,155 @@ public class TaskExecutor {
         }
     }
 
+//    private void processTask(InstanceTasks task) throws SQLException {
+//        OffsetDateTime startedAt = OffsetDateTime.now();
+//        String elementType = processNavigator.getElementTypeById(task.getBpmnElementId()).toLowerCase();
+//        if (elementType.contains("gateway")) {
+//            processGateway(task, elementType);
+//        } else {
+//            TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
+//            if (userImpl == null) {
+//                handleMissingImplementation(task);
+//                return;
+//            }
+//            try {
+//                userImpl.execute(new ExecutionContext(task,
+//                        JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId()))
+//                ));
+//                handleTaskSuccess(task, startedAt);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                handleTaskFailure(task, userImpl, startedAt, e);
+//            }
+//        }
+//
+//    }
     private void processTask(InstanceTasks task) throws SQLException {
         OffsetDateTime startedAt = OffsetDateTime.now();
         String elementType = processNavigator.getElementTypeById(task.getBpmnElementId()).toLowerCase();
-        if (elementType.contains("gateway")) {
-            processGateway(task, elementType);
-        } else {
-            TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
-            if (userImpl == null) {
-                handleMissingImplementation(task);
-                return;
+
+        try {
+            if (isGateway(elementType)) {
+                handleGateway(task, elementType);
+            } else if (isEndEvent(elementType)) {
+                handleEndEvent(task);
+            } else {
+                handleUserTask(task, startedAt);
             }
-            try {
-                userImpl.execute(new ExecutionContext(task,
-                        JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId()))
-                ));
-                handleTaskSuccess(task, startedAt);
-            } catch (Exception e) {
-                handleTaskFailure(task, userImpl, startedAt, e);
-            }
+        } catch (Exception e) {
+            handleGenericFailure(task, startedAt, e);
         }
     }
 
+    private boolean isGateway(String elementType) {
+        return elementType.contains("gateway");
+    }
 
+    private boolean isEndEvent(String elementType) {
+        return elementType.equalsIgnoreCase("endEvent");
+    }
 
-    private void processGateway(InstanceTasks task, String elementType) throws SQLException {
+    private void handleGateway(InstanceTasks task, String elementType) throws SQLException {
         List<String> incomingElementsId = processNavigator.getIncomingElementsId(task.getBpmnElementId());
-        int completedTaskAmount = taskRepository.getCompletedTasksForInstance(task.getInstanceId(), task.getId(), incomingElementsId);
-        if (completedTaskAmount != incomingElementsId.size()) {
-            /*Bad practice, we can lose task if queue is full
-            If we're working with small process, try use offer() method or some construction to guarantee adding element
-            Or change status to "PENDING" and give work to poller
 
-            P.S. "exclusiveGateway" currently unsupported
-            В общем, концепция такая (на понятийном?):
-                1) Суем назад в очередь для повторной обработки TaskExecutor-ом (это плохо, можем потерять задачу)
-                2) Меняем ей статус снова на PENDING, чтобы ProcessPoller снова достал ее и положил в очередь
-
-                Возможно придумать для этого установку стратегии того как мы будет работать с тасками и отдать
-                пользователь возможность выбрать стратегию обработки*/
-            taskQueue.add(task);
-        } else {
-            TransactionManager.executeInTransaction(connection -> {
-                createNextTasks(task, connection);
-            });
-
+        if (!taskRepository.areAllTasksCompleted(task.getInstanceId(), incomingElementsId)) {
+            if (!requeueTask(task)) {
+                TransactionManager.executeInTransaction(connection -> {
+                    taskRepository.updateStatus(connection, task.getId(), Status.PENDING);
+                });
+            }
+            return;
         }
+
+        completeTaskAndProceed(task, OffsetDateTime.now());
     }
+
+    private void handleUserTask(InstanceTasks task, OffsetDateTime startedAt) throws Exception {
+        TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
+        if (userImpl == null) {
+            handleMissingImplementation(task);
+            return;
+        }
+
+        ExecutionContext context = new ExecutionContext(task,
+                JsonUtils.fromJsonb(processInstanceRepository.getBusinessData(task.getInstanceId())));
+
+        userImpl.execute(context);
+        completeTaskAndProceed(task, startedAt);
+    }
+
+    private void handleEndEvent(InstanceTasks task) throws SQLException {
+        TransactionManager.executeInTransaction(connection -> {
+            var endTime = OffsetDateTime.now();
+            processInstanceRepository.updateInstanceEndTimeIfNull(task.getInstanceId(), endTime, connection);
+            taskRepository.updateTask(
+                    connection,
+                    task.getId(),
+                    Status.COMPLETED,
+                    task.getStartTime(),
+                    endTime,
+                    task.getCurrentRetriesAmount());
+        });
+    }
+
+    private void completeTaskAndProceed(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {
+        TransactionManager.executeInTransaction(connection -> {
+            taskRepository.updateTask(
+                    connection,
+                    task.getId(),
+                    Status.COMPLETED,
+                    startedAt,
+                    OffsetDateTime.now(),
+                    task.getCurrentRetriesAmount()
+            );
+            createNextTasks(task, connection);
+        });
+    }
+
+    private boolean requeueTask(InstanceTasks task) {
+        return taskQueue.offer(task);
+    }
+
+    private void handleGenericFailure(InstanceTasks task, OffsetDateTime startedAt, Exception e) {
+        TaskDelegate userImpl = userTasks.get(task.getBpmnElementId());
+        handleTaskFailure(task, userImpl, startedAt, e);
+    }
+
+
+
+//    private void processGateway(InstanceTasks task, String elementType) throws SQLException {
+//        List<String> incomingElementsId = processNavigator.getIncomingElementsId(task.getBpmnElementId());
+//        //int completedTaskAmount = taskRepository.getCompletedTasksForInstance(task.getInstanceId(), task.getId(), incomingElementsId);
+//        //if (completedTaskAmount != incomingElementsId.size()) {
+//        if (!taskRepository.areAllTasksCompleted(task.getInstanceId(), incomingElementsId)) {
+//            /*Bad practice, we can lose task if queue is full
+//            If we're working with small process, try use offer() method or some construction to guarantee adding element
+//            Or change status to "PENDING" and give work to poller
+//
+//            P.S. "exclusiveGateway" currently unsupported
+//            В общем, концепция такая (на понятийном?):
+//                1) Суем назад в очередь для повторной обработки TaskExecutor-ом (это плохо, можем потерять задачу)
+//                2) Меняем ей статус снова на PENDING, чтобы ProcessPoller снова достал ее и положил в очередь
+//
+//                Возможно придумать для этого установку стратегии того как мы будет работать с тасками и отдать
+//                пользователь возможность выбрать стратегию обработки*/
+//            //Тут еще retry сделать
+//            if (!requeueTask(task)) {
+//                TransactionManager.executeInTransaction(connection -> {
+//                    taskRepository.updateStatus(connection, task.getId(), Status.PENDING);
+//                });
+//            }
+//        } else {
+//           // handleTaskSuccess(task,)
+//            //TransactionManager.executeInTransaction(connection -> createNextTasks(task, connection));
+//
+//        }
+//    }
 
     private void handleTaskSuccess(InstanceTasks task, OffsetDateTime startedAt) throws SQLException {
         TransactionManager.executeInTransaction(connection -> {
             taskRepository.updateTask(connection, task.getId(),
-                    Status.COMPLETED,startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
+                    Status.COMPLETED, startedAt, OffsetDateTime.now(), task.getCurrentRetriesAmount());
             createNextTasks(task, connection);
         });
     }
@@ -150,8 +247,9 @@ public class TaskExecutor {
                     taskRepository.updateTask(connection, updatedTask);
                     processInstanceRepository.updateInstance(connection, task.getInstanceId(), null, null, OffsetDateTime.now());
                 } else {
-                    taskRepository.updateTask(connection, updatedTask);
-                    taskQueue.add(updatedTask);
+                    if (!taskQueue.offer(task)) {
+                        taskRepository.updateTask(connection, updatedTask);
+                    }
                 }
             });
             if (userImpl != null) {
@@ -182,6 +280,7 @@ public class TaskExecutor {
     }
 
     public void shutdown() {
+        //Тут всем PENDING выставить, кто в очереди
         running.set(false);
         executor.shutdown();
         try {
@@ -191,6 +290,10 @@ public class TaskExecutor {
         } catch (InterruptedException e) {
             executor.shutdownNow();
             Thread.currentThread().interrupt();
+        } finally {
+            for (var task : taskQueue) {
+                taskRepository.updateStatus(task.getId(), Status.PENDING);
+            }
         }
     }
 

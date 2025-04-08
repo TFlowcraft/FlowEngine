@@ -11,7 +11,7 @@ import java.util.*;
 public class ProcessEngineTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"/diagram.bpmn"})
+    @ValueSource(strings = {"/diagramTwoParallelGates.bpmn"})
     public void createProcessEngine(String processSchemePath) {
         List<TaskDelegate> taskDelegates = getTaskDelegates();
         try {
@@ -69,7 +69,7 @@ public class ProcessEngineTest {
 
             @Override
             public void execute(ExecutionContext context) {
-                System.out.println("Executing task 1");
+                System.out.println("Executing task 3");
                 List<Object> name = Collections.singletonList(context.getDataField("map-friends-name"));
                 for (Object object : name) {
                     System.out.printf("Data field value: %s\n", object);

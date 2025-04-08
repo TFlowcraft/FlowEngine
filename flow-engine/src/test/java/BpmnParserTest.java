@@ -1,3 +1,4 @@
+import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
 import engine.model.BpmnElement;
 import engine.common.ExecutionContext;
@@ -11,11 +12,11 @@ class BpmnParserTest {
     private Map<String, BpmnElement> parsedElements;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/diagramTestWithGates.bpmn"})
+    @ValueSource(strings = {"/diagramTwoParallelGates.bpmn"})
     public void parseScheme(String path) {
         try {
             var list = new ArrayList<TaskDelegate>();
-            for (int i = 0 ; i < 5 ; i++) {
+            for (int i = 0 ; i < 3 ; i++) {
                 list.add(new TaskDelegate() {
                     @Override
                     public void execute(ExecutionContext context) {
@@ -31,7 +32,12 @@ class BpmnParserTest {
 
             var result = BpmnParser.parseFile(getClass().getResourceAsStream(path), list);
             var delegates = result.elements();
-            delegates.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
+            ProcessNavigator navigator = new ProcessNavigator(delegates);
+            var in = navigator.getIncomingElementsId("Gateway_1lf99ds");
+            for (var element : in) {
+                System.out.println("Elem: " + element);
+            }
+            //delegates.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
 //            List<BpmnElement> values = scheme.values().stream().toList();
 //            for (BpmnElement bpmnElement : values) {
 //                System.out.println(bpmnElement.toString());

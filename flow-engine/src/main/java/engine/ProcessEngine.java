@@ -15,7 +15,6 @@ import engine.parser.BpmnParser;
 import io.github.cdimascio.dotenv.Dotenv;
 import io.javalin.Javalin;
 import org.jooq.DSLContext;
-import org.jooq.JSONB;
 import org.xml.sax.SAXException;
 import persistence.DatabaseConfig;
 import persistence.poller.ProcessPoller;
@@ -27,38 +26,70 @@ import persistence.repository.impl.TaskRepository;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 public class ProcessEngine {
+    private static Javalin app;
+
     private final Map<String, BpmnElement> bpmnProcess;
     private final ProcessInstanceRepository processInstanceRepository;
     private final TaskRepository taskRepository;
     private final ProcessPoller processPoller;
     private final TaskExecutor taskExecutor;
     private final ProcessNavigator processNavigator;
-    private final Javalin app;
+    private final ProcessInfoRepository processInfoRepository;
 
 
-    public ProcessEngine(Map<String, BpmnElement> bpmnProcess, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, ProcessPoller processPoller, TaskExecutor taskExecutor, Javalin app) {
+    public ProcessEngine(Map<String, BpmnElement> bpmnProcess, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, ProcessPoller processPoller, TaskExecutor taskExecutor, ProcessInfoRepository processInfoRepository) {
         this.bpmnProcess = bpmnProcess;
         this.processInstanceRepository = processInstanceRepository;
         this.taskRepository = taskRepository;
         this.processPoller = processPoller;
         this.taskExecutor = taskExecutor;
         processNavigator = new ProcessNavigator(bpmnProcess);
-        this.app = app;
+        this.processInfoRepository = processInfoRepository;
     }
 
-    public void createProcessInstance(Map<String, Object> businessData) {
-        UUID id = processInstanceRepository.createNew(businessData);
-        var startEvent = processNavigator.findElementByType("startEvent").orElseThrow();
-        var outputEvent = processNavigator.getOutgoingElements(startEvent.getId());
-        for (var el : outputEvent) {
-            taskRepository.createTaskForInstance(id, el.getId());
+    public void createProcessInstance(UUID processId, Map<String, Object> businessData) {
+        UUID processInstanceId = processInstanceRepository.insertProcessInstance(processId, businessData);
+        BpmnElement startEvent = processNavigator.findElementByType("startEvent").orElseThrow();
+        taskRepository.createTaskForInstance(processInstanceId, startEvent.getId());
+    }
+
+
+    public UUID createProcess(String bpmnProcessId, String processName, String xmlFileName) throws IOException {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(xmlFileName)) {
+            if (inputStream == null) {
+                Path xmlFilePath = Path.of(xmlFileName);
+                if (Files.exists(xmlFilePath)) {
+                    try (InputStream fileInputStream = Files.newInputStream(xmlFilePath)) {
+                        String xmlContent = new String(fileInputStream.readAllBytes(), StandardCharsets.UTF_8);
+                        UUID id = UUID.randomUUID();
+                        return processInfoRepository.insertProcessInfo(bpmnProcessId, processName, xmlContent);
+                    }
+                } else {
+                    throw new IOException("File not found in classpath or filesystem: " + xmlFileName);
+                }
+            }
+            String xmlContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            UUID id = UUID.randomUUID();
+            return processInfoRepository.insertProcessInfo(bpmnProcessId, processName, xmlContent);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new IOException("Error reading the file: " + xmlFileName, e);
         }
+    }
+
+
+    public ProcessNavigator getProcessNavigator() {
+        return processNavigator;
     }
 
     public void shutdown() {
@@ -92,7 +123,10 @@ public class ProcessEngine {
         private String dbUrl;
         private String dbUser;
         private String dbPassword;
-        private String serverApiUrl;
+        private long connectionTimeoutMs;
+        private long idleTimeoutMs;
+        private long maxLifetimeMs;
+        private boolean defaultHikariSettings = true;
 
         public ProcessEngineConfigurator setBpmnProcessFile(String bpmnFile) {
             inputStream = getClass().getResourceAsStream(bpmnFile);
@@ -104,10 +138,19 @@ public class ProcessEngine {
             return this;
         }
 
-        public ProcessEngineConfigurator setHikariPoolSettings(String dbUrl, String dbUser, String dbPassword) {
+        public ProcessEngineConfigurator setHikariPoolDbSettings(String dbUrl, String dbUser, String dbPassword) {
             this.dbUrl = dbUrl;
             this.dbUser = dbUser;
             this.dbPassword = dbPassword;
+            return this;
+        }
+
+        public ProcessEngineConfigurator setHikariPoolSettings(int poolSize, long connectionTimeoutMs, long idleTimeoutMs, long maxLifetimeMs) {
+            this.poolSize = poolSize;
+            this.connectionTimeoutMs = connectionTimeoutMs;
+            this.idleTimeoutMs = idleTimeoutMs;
+            this.maxLifetimeMs = maxLifetimeMs;
+            this.defaultHikariSettings = false;
             return this;
         }
 
@@ -131,17 +174,13 @@ public class ProcessEngine {
             return this;
         }
 
-        public ProcessEngineConfigurator setServerApiUrl(String serverApiUrl) {
-            this.serverApiUrl = serverApiUrl;
-            return this;
-        }
-
-        private Javalin startApiServer(ControllerSetup ... controllers) {
-            Javalin app = Javalin.create().start(port);
-            for (var controller : controllers) {
-                controller.registerEndpoints(app);
+        private void startApiServer(ControllerSetup ... controllers) {
+            if (ProcessEngine.app == null) {
+                ProcessEngine.app = Javalin.create().start(port);
+                for (var controller : controllers) {
+                    controller.registerEndpoints(app);
+                }
             }
-            return app;
         }
 
         private void validate() {
@@ -173,29 +212,39 @@ public class ProcessEngine {
             return this;
         }
 
-        private Javalin initializeEngineApi(DSLContext context, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, Map<String, BpmnElement> bpmnProcess) {
+        private void initializeEngineApi(DSLContext context, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository) {
             HistoryController historyController = new HistoryController(new HistoryService(new HistoryRepository(context)));
             ProcessInfoRepository processInfoRepository = new ProcessInfoRepository(context);
+            ProcessInfoService processInfoService = new ProcessInfoService(processInfoRepository);
             ProcessInstanceController processInstanceController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
-                    new ProcessInfoService(processInfoRepository));
-            ProcessController processController = new ProcessController(new ProcessService(processInfoRepository));
-            TaskController taskController = new TaskController(new TaskService(taskRepository, bpmnProcess));
-            return startApiServer(historyController, processInstanceController, taskController, processController);
+                    processInfoService);
+            ProcessController processController = new ProcessController(processInfoService);
+            TaskController taskController = new TaskController(new TaskService(taskRepository));
+            startApiServer(historyController, processInstanceController, taskController, processController);
+        }
+
+        private void initDbConfig() {
+            if (!defaultHikariSettings) {
+                DatabaseConfig.setupConfig(dbUrl, dbUser, dbPassword, poolSize, connectionTimeoutMs, idleTimeoutMs, maxLifetimeMs);
+            } else {
+                DatabaseConfig.setupConfig(dbUrl, dbUser, dbPassword);
+            }
         }
 
 
         public ProcessEngine build() throws ParserConfigurationException, IOException, SAXException {
             validate();
-            DatabaseConfig.setupConfig(dbUrl, dbUser, dbPassword);
+            initDbConfig();
             DSLContext context = DatabaseConfig.getContext();
             var parserResult = BpmnParser.parseFile(inputStream, userTaskImplementation);
             BlockingQueue<InstanceTasks> engineQueue = new ArrayBlockingQueue<>(processTaskAmount);
             TaskRepository taskRepository = new TaskRepository(context);
             ProcessInstanceRepository processInstanceRepository = new ProcessInstanceRepository(context);
             ProcessPoller processPoller = new ProcessPoller(engineQueue, taskRepository, new ScheduledThreadPoolExecutor(poolSize));
+            ProcessInfoRepository processInfoRepository = new ProcessInfoRepository(context);
             TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount, new ProcessNavigator(parserResult.elements()));
-            Javalin app = initializeEngineApi(context, processInstanceRepository, taskRepository, parserResult.elements());
-            return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor, app);
+            initializeEngineApi(context, processInstanceRepository, taskRepository);
+            return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor, processInfoRepository);
         }
 
 

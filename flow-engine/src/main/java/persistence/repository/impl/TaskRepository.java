@@ -3,15 +3,13 @@ package persistence.repository.impl;
 import static com.database.entity.generated.tables.InstanceTasks.INSTANCE_TASKS;
 import static org.jooq.impl.DSL.count;
 
+import api.dto.TaskDto;
 import com.database.entity.generated.tables.ProcessInfo;
 import com.database.entity.generated.tables.ProcessInstance;
 import com.database.entity.generated.tables.pojos.InstanceTasks;
 import com.database.entity.generated.tables.records.InstanceTasksRecord;
 import engine.common.Status;
-import org.jooq.DSLContext;
-import org.jooq.SQLDialect;
-import org.jooq.UpdateSetFirstStep;
-import org.jooq.UpdateSetMoreStep;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 import java.sql.Connection;
 import java.time.OffsetDateTime;
@@ -33,26 +31,26 @@ public class TaskRepository  {
     }
 
     //TODO Тут надо в history stacktrace добавить, поглядеть как это сделать
-    public static InstanceTasks createRetryTask(InstanceTasks task, OffsetDateTime startedAt, Exception exception) {
+    public static InstanceTasks createRetryTask(InstanceTasks task, Exception exception) {
         return new InstanceTasks(
                 task.getId(),
                 task.getInstanceId(),
                 task.getBpmnElementId(),
                 Status.PENDING,
-                startedAt,
-                null,
+                task.getStartTime(),
+                task.getEndTime(),
                 task.getCurrentRetriesAmount() + 1
         );
     }
 
-    public static InstanceTasks createFailedTask(InstanceTasks task, OffsetDateTime startedAt, Exception exception) {
+    public static InstanceTasks createFailedTask(InstanceTasks task, OffsetDateTime startedAt, OffsetDateTime endedAt, Exception exception) {
         return new InstanceTasks(
                 task.getId(),
                 task.getInstanceId(),
                 task.getBpmnElementId(),
                 Status.FAILED,
                 startedAt,
-                OffsetDateTime.now(),
+                endedAt,
                 task.getCurrentRetriesAmount()
         );
     }
@@ -62,7 +60,6 @@ public class TaskRepository  {
                 .select(count())
                 .from(INSTANCE_TASKS)
                 .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
-                //.and(INSTANCE_TASKS.ID.eq(taskId))
                 .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
                 .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
                 .fetchOptionalInto(Integer.class)
@@ -75,25 +72,67 @@ public class TaskRepository  {
         }
 
         int totalElements = elementsId.size();
+        Optional<Integer> completedCount = getTaskAmountForStatus(instanceId, elementsId, Status.COMPLETED);
 
-        Integer completedCount = context
+//        Integer completedCount = context
+//                .select(count())
+//                .from(INSTANCE_TASKS)
+//                .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
+//                .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
+//                .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
+//                .fetchOneInto(Integer.class);
+        return completedCount.isPresent() && completedCount.get() == totalElements;
+        //return completedCount != null && completedCount == totalElements;
+    }
+
+    public boolean hasFailedTasks(UUID instanceId, List<String> elementsId) {
+        if (elementsId.isEmpty()) {
+            throw new IllegalArgumentException("Elements list cannot be empty");
+        }
+        Optional<Integer> failedCount = getTaskAmountForStatus(instanceId, elementsId, Status.FAILED);
+        return failedCount.isPresent() && failedCount.get() != 0;
+    }
+
+    private Optional<Integer> getTaskAmountForStatus(UUID instanceId, List<String> elementsId, Status status) {
+        return context
                 .select(count())
                 .from(INSTANCE_TASKS)
                 .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
                 .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
-                .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
-                .fetchOneInto(Integer.class);
+                .and(INSTANCE_TASKS.STATUS.eq(status))
+                .fetchOptionalInto(Integer.class);
 
-        return completedCount != null && completedCount == totalElements;
     }
+
 
     public List<InstanceTasks> getAll(String name) {
         return context.selectFrom(INSTANCE_TASKS).fetchInto(InstanceTasks.class);
     }
 
-    public List<InstanceTasks> getAll(String processName, UUID instanceId) {
+//    public List<InstanceTasks> getAll(String processName, UUID instanceId) {
+//        return context
+//                .selectDistinct(INSTANCE_TASKS.fields())
+//                .from(INSTANCE_TASKS)
+//                .join(ProcessInstance.PROCESS_INSTANCE)
+//                .on(ProcessInstance.PROCESS_INSTANCE.ID.eq(INSTANCE_TASKS.INSTANCE_ID))
+//                .join(ProcessInfo.PROCESS_INFO)
+//                .on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
+//                .where(ProcessInstance.PROCESS_INSTANCE.ID.eq(instanceId))
+//                .and(ProcessInfo.PROCESS_INFO.PROCESS_NAME.eq(processName))
+//                .fetchInto(InstanceTasks.class);
+//    }
+
+    public List<TaskDto> getAllTasksByInstanceId(String processName, UUID instanceId) {
         return context
-                .selectDistinct(INSTANCE_TASKS.fields())
+                .select(
+                        INSTANCE_TASKS.BPMN_ELEMENT_ID,
+                        INSTANCE_TASKS.STATUS,
+                        INSTANCE_TASKS.START_TIME,
+                        INSTANCE_TASKS.END_TIME,
+                        INSTANCE_TASKS.INSTANCE_ID,
+                        INSTANCE_TASKS.ID,
+                        ProcessInfo.PROCESS_INFO.PROCESS_NAME
+                )
                 .from(INSTANCE_TASKS)
                 .join(ProcessInstance.PROCESS_INSTANCE)
                 .on(ProcessInstance.PROCESS_INSTANCE.ID.eq(INSTANCE_TASKS.INSTANCE_ID))
@@ -101,7 +140,7 @@ public class TaskRepository  {
                 .on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
                 .where(ProcessInstance.PROCESS_INSTANCE.ID.eq(instanceId))
                 .and(ProcessInfo.PROCESS_INFO.PROCESS_NAME.eq(processName))
-                .fetchInto(InstanceTasks.class);
+                .fetchInto(TaskDto.class);
     }
 
     public List<Status> getTasksStatusByInstanceId(UUID instanceId, List<String> elementsId) {
@@ -193,6 +232,15 @@ public class TaskRepository  {
 
     }
 
+    public void updateStartTimeIfNull(UUID taskId, OffsetDateTime newStartTime) {
+        context.update(INSTANCE_TASKS)
+                .set(INSTANCE_TASKS.START_TIME,
+                        DSL.when(INSTANCE_TASKS.START_TIME.isNull(), newStartTime)
+                                .otherwise(INSTANCE_TASKS.START_TIME))
+                .where(INSTANCE_TASKS.ID.eq(taskId))
+                .execute();
+    }
+
     public void updateTask(Connection connection, com.database.entity.generated.tables.pojos.InstanceTasks task) {
         DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);
         updateTask(dsl, task.getId(), task.getStatus(), task.getStartTime(), task.getEndTime(), task.getCurrentRetriesAmount());
@@ -215,8 +263,11 @@ public class TaskRepository  {
             update = updateStep.set(INSTANCE_TASKS.STATUS, status);
         }
         if (startTime != null) {
-            update = (update == null ? updateStep.set(INSTANCE_TASKS.START_TIME, startTime)
-                    : update.set(INSTANCE_TASKS.START_TIME, startTime));
+            Field<OffsetDateTime> startTimeField = INSTANCE_TASKS.START_TIME;
+            Field<OffsetDateTime> startTimeValue = DSL.when(startTimeField.isNull(), startTime)
+                    .otherwise(startTimeField);
+            update = (update == null ? updateStep.set(startTimeField, startTimeValue)
+                    : update.set(startTimeField, startTimeValue));
         }
         if (endTime != null) {
             update = (update == null ? updateStep.set(INSTANCE_TASKS.END_TIME, endTime)

@@ -6,7 +6,6 @@ import static com.database.entity.generated.tables.ProcessInstance.PROCESS_INSTA
 import com.database.entity.generated.tables.ProcessInfo;
 import com.database.entity.generated.tables.pojos.ProcessInstance;
 import com.database.entity.generated.tables.records.ProcessInstanceRecord;
-import engine.common.JsonUtils;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import java.sql.Connection;
@@ -41,10 +40,11 @@ public class ProcessInstanceRepository {
                 .fetchInto(ProcessInstance.class);
     }
 
-    public UUID createNew(Map<String, Object> businessData) {
+    public UUID insertProcessInstance(UUID processId, Map<String, Object> businessData) {
         ProcessInstanceRecord processInstanceRecord = context.newRecord(PROCESS_INSTANCE);
         processInstanceRecord.setBusinessData(businessData);
         processInstanceRecord.setStartedAt(OffsetDateTime.now());
+        processInstanceRecord.setProcessId(processId);
         processInstanceRecord.store();
         return processInstanceRecord.getId();
     }

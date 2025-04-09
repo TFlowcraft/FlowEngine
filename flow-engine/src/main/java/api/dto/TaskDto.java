@@ -8,20 +8,30 @@ import java.util.UUID;
 public class TaskDto {
     private UUID id;
     private UUID instanceId;
+    private String processName;
     private String bpmnElementId;
     private String taskName;
     private Status status;
     private OffsetDateTime startTime;
     private OffsetDateTime endTime;
 
-    public TaskDto(String bpmnElementId, String taskName, Status status, OffsetDateTime startTime, OffsetDateTime endTime, UUID instanceId, UUID id) {
+    public TaskDto(UUID id, UUID instanceId, String processName, String bpmnElementId, String taskName, Status status, OffsetDateTime startTime, OffsetDateTime endTime) {
+        this.id = id;
+        this.instanceId = instanceId;
+        this.processName = processName;
         this.bpmnElementId = bpmnElementId;
         this.taskName = taskName;
         this.status = status;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.instanceId = instanceId;
-        this.id = id;
+    }
+
+    public String getProcessName() {
+        return processName;
+    }
+
+    public void setProcessName(String processName) {
+        this.processName = processName;
     }
 
     public UUID getId() {

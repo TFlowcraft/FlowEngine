@@ -2,15 +2,15 @@ package api.controller.impl;
 
 import api.Response;
 import api.controller.ControllerSetup;
-import api.service.ProcessService;
+import api.service.ProcessInfoService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
 public class ProcessController implements ControllerSetup {
-    private final ProcessService processService;
+    private final ProcessInfoService processInfoService;
 
-    public ProcessController(ProcessService processService) {
-        this.processService = processService;
+    public ProcessController(ProcessInfoService processInfoService) {
+        this.processInfoService = processInfoService;
     }
 
     @Override
@@ -19,7 +19,7 @@ public class ProcessController implements ControllerSetup {
     }
 
     public void getProcess(Context ctx) {
-        var processes = processService.getAllProcessInfos();
+        var processes = processInfoService.getAllProcessInfos();
         Response.ok(ctx, processes);
     }
 }

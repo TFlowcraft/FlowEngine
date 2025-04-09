@@ -5,7 +5,8 @@ plugins {
 }
 
 group = 'com.github.flowengine'
-version = '1.0-SNAPSHOT'
+version = '1.0.0'
+archivesBaseName = 'flow-engine'
 
 repositories {
     mavenCentral()
@@ -93,12 +94,13 @@ sourceSets {
 tasks.register('sourcesJar', Jar) {
     archiveClassifier.set('sources')
     from sourceSets.main.allSource
-    from(generatedJooqDir.get().asFile)  // Добавляем директорию с сгенерированными файлами JOOQ
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE  // Исключаем дубли
+    from(generatedJooqDir.get().asFile)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn 'generateJooq'
 }
 
 tasks.named('compileJava').configure {
-    dependsOn('generateJooq')
+    dependsOn 'generateJooq'
 }
 
 
@@ -116,18 +118,13 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
+            artifactId = 'flow-engine'
 
             pom {
                 name = 'Flow Engine'
                 description = 'Business process orchestrator engine'
                 url = 'https://github.com/TFlowcraft/FlowEngine'
 
-//                licenses {
-//                    license {
-//                        name = 'MIT License'
-//                        url = 'https://opensource.org/licenses/MIT'
-//                    }
-//                }
 
                 developers {
                     developer {

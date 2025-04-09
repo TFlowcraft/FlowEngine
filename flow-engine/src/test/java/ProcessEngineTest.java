@@ -1,11 +1,14 @@
 import engine.ProcessEngine;
+import engine.common.ProcessNavigator;
 import engine.common.TaskDelegate;
 import engine.common.ExecutionContext;
+import engine.model.BpmnElement;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 
+import java.nio.file.Path;
 import java.util.*;
 
 public class ProcessEngineTest {
@@ -18,15 +21,20 @@ public class ProcessEngineTest {
             ProcessEngine processEngine = new ProcessEngine.ProcessEngineConfigurator()
                     .useDefaults(processSchemePath, taskDelegates)
                     .build();
-            processEngine.start();
+            ProcessNavigator processNavigator = processEngine.getProcessNavigator();
+            BpmnElement element = processNavigator.findElementByType("process").orElseThrow();
+      UUID processId =
+          processEngine.createProcess(
+              element.getId(),
+              element.getName(),
+              "C:\\Users\\degl\\Documents\\GitHub\\FlowEngine\\flow-engine\\src\\test\\resources\\diagramTwoParallelGates.bpmn");
             Map<String, Object> data = new HashMap<>();
             data.put("string-name", "john");
             data.put("int-age", 30);
             data.put("map-friends-name", List.of("Bob", "John", "Alice", "Kate"));
-            processEngine.createProcessInstance(data);
-            while (true) {
-                //
-            }
+            processEngine.createProcessInstance(processId, data);
+            processEngine.start();
+            while (true) {}
             //assert !instance.isEmpty();
         } catch (Exception e) {
             e.printStackTrace();

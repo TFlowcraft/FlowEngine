@@ -27,7 +27,7 @@ public class ProcessEngineTest {
           processEngine.createProcess(
               element.getId(),
               element.getName(),
-              "C:\\Users\\degl\\Documents\\GitHub\\FlowEngine\\flow-engine\\src\\test\\resources\\diagramTwoParallelGates.bpmn");
+              "diagramTwoParallelGates.bpmn");
             Map<String, Object> data = new HashMap<>();
             data.put("string-name", "john");
             data.put("int-age", 30);

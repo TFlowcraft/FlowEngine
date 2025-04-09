@@ -212,14 +212,14 @@ public class ProcessEngine {
             return this;
         }
 
-        private void initializeEngineApi(DSLContext context, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository) {
+        private void initializeEngineApi(DSLContext context, ProcessInstanceRepository processInstanceRepository, TaskRepository taskRepository, Map<String, BpmnElement> bpmnElements) {
             HistoryController historyController = new HistoryController(new HistoryService(new HistoryRepository(context)));
             ProcessInfoRepository processInfoRepository = new ProcessInfoRepository(context);
             ProcessInfoService processInfoService = new ProcessInfoService(processInfoRepository);
             ProcessInstanceController processInstanceController = new ProcessInstanceController(new ProcessInstanceService(processInstanceRepository),
                     processInfoService);
             ProcessController processController = new ProcessController(processInfoService);
-            TaskController taskController = new TaskController(new TaskService(taskRepository));
+            TaskController taskController = new TaskController(new TaskService(taskRepository, bpmnElements));
             startApiServer(historyController, processInstanceController, taskController, processController);
         }
 
@@ -243,7 +243,7 @@ public class ProcessEngine {
             ProcessPoller processPoller = new ProcessPoller(engineQueue, taskRepository, new ScheduledThreadPoolExecutor(poolSize));
             ProcessInfoRepository processInfoRepository = new ProcessInfoRepository(context);
             TaskExecutor taskExecutor = new TaskExecutor(engineQueue, poolSize, processInstanceRepository, taskRepository, parserResult.delegates(), retriesAmount, new ProcessNavigator(parserResult.elements()));
-            initializeEngineApi(context, processInstanceRepository, taskRepository);
+            initializeEngineApi(context, processInstanceRepository, taskRepository, parserResult.elements());
             return new ProcessEngine(parserResult.elements(), processInstanceRepository, taskRepository, processPoller, taskExecutor, processInfoRepository);
         }
 

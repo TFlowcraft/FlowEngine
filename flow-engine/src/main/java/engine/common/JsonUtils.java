@@ -14,7 +14,7 @@ public final class JsonUtils {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-    // Конвертация Map → JSONB
+
     public static JSONB toJsonb(Map<String, Object> data) {
         try {
             return JSONB.valueOf(OBJECT_MAPPER.writeValueAsString(data));
@@ -23,7 +23,7 @@ public final class JsonUtils {
         }
     }
 
-    // Конвертация JSONB → Map
+
     public static Map<String, Object> fromJsonb(JSONB json) {
         if (json == null || json.data().equals("null")) return new ConcurrentHashMap<>();
         try {

@@ -19,51 +19,47 @@ public class ExecutionContext {
         }
     }
 
-    // Получить значение по ключу
     public Object getDataField(String key) {
         return businessData.get(key);
     }
 
-    // Получить значение с приведением типа
     public <T> T getDataField(String key, Class<T> type) {
         Object value = businessData.get(key);
         return type.isInstance(value) ? type.cast(value) : null;
     }
 
-    // Добавить или обновить поле
     public void putDataField(String key, Object value) {
         if (key == null) throw new IllegalArgumentException("Key cannot be null");
         businessData.put(key, value);
     }
 
-    // Удалить поле
+
     public void removeDataField(String key) {
         businessData.remove(key);
     }
 
-    // Проверить наличие поля
     public boolean containsDataField(String key) {
         return businessData.containsKey(key);
     }
 
-    // Объединить с другой мапой данных
+
     public void mergeData(Map<String, Object> additionalData) {
         if (additionalData != null) {
             businessData.putAll(additionalData);
         }
     }
 
-    // Очистить все данные
+
     public void clearData() {
         businessData.clear();
     }
 
-    // Получить данные как неизменяемую мапу
+
     public Map<String, Object> getBusinessDataAsMap() {
         return Collections.unmodifiableMap(businessData);
     }
 
-    // Получить данные в формате JSONB
+
     public JSONB getBusinessDataAsJsonb() {
         try {
             return JSONB.valueOf(JsonUtils.OBJECT_MAPPER.writeValueAsString(businessData));
@@ -72,7 +68,6 @@ public class ExecutionContext {
         }
     }
 
-    // Обновить данные из JSONB (например, после изменений в БД)
     public void updateBusinessDataFromJsonb(JSONB json) {
         Map<String, Object> newData = JsonUtils.fromJsonb(json);
         businessData.clear();
@@ -81,7 +76,6 @@ public class ExecutionContext {
         }
     }
 
-    // Получить задачу, связанную с контекстом
     public InstanceTasks getInstanceTask() {
         return instanceTask;
     }

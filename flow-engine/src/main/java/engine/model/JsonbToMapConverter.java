@@ -1,6 +1,7 @@
 package engine.model;
 
 import engine.common.JsonUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jooq.Converter;
 import org.jooq.JSONB;
 
@@ -17,11 +18,13 @@ public class JsonbToMapConverter implements Converter<JSONB, Map<String, Object>
         return JsonUtils.toJsonb(map);
     }
 
+    @NotNull
     @Override
     public Class<JSONB> fromType() {
         return JSONB.class;
     }
 
+    @NotNull
     @Override
     @SuppressWarnings("unchecked")
     public Class<Map<String, Object>> toType() {

@@ -1,14 +1,11 @@
 package persistence.repository.impl;
 
 import api.dto.ProcessInfoDto;
-import com.database.entity.generated.Public;
 import com.database.entity.generated.tables.pojos.ProcessInfo;
 import com.database.entity.generated.tables.records.ProcessInfoRecord;
 import org.jooq.DSLContext;
-import org.jooq.Record1;
 import org.jooq.XML;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static com.database.entity.generated.tables.ProcessInfo.PROCESS_INFO;
@@ -44,7 +41,7 @@ public class ProcessInfoRepository {
         .fetchInto(ProcessInfoDto.class);
     }
 
-    public ProcessInfo getProcessByProcessId(UUID processId) {
+    public ProcessInfo getProcessById(UUID processId) {
         return context.selectFrom(PROCESS_INFO)
                 .where(PROCESS_INFO.ID.eq(processId))
                 .fetchOneInto(ProcessInfo.class);

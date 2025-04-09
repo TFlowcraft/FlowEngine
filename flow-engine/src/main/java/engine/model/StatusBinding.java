@@ -1,6 +1,7 @@
 package engine.model;
 
 import engine.common.Status;
+import org.jetbrains.annotations.NotNull;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -9,6 +10,7 @@ import java.sql.SQLException;
 
 public class StatusBinding implements Binding<String, Status> {
 
+    @NotNull
     @Override
     public Converter<String, Status> converter() {
         return new Converter<>() {
@@ -22,11 +24,13 @@ public class StatusBinding implements Binding<String, Status> {
                 return userObject == null ? null : userObject.name();
             }
 
+            @NotNull
             @Override
             public Class<String> fromType() {
                 return String.class;
             }
 
+            @NotNull
             @Override
             public Class<Status> toType() {
                 return Status.class;
@@ -35,7 +39,7 @@ public class StatusBinding implements Binding<String, Status> {
     }
 
     @Override
-    public void sql(BindingSQLContext<Status> ctx) throws SQLException {
+    public void sql(BindingSQLContext<Status> ctx) {
         String value = converter().to(ctx.value());
         ctx.render().visit(DSL.val(value, SQLDataType.VARCHAR));
     }

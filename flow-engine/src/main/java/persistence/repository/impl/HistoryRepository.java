@@ -27,9 +27,6 @@ public class HistoryRepository {
                 .fetchInto(InstanceHistory.class);
     }
 
-
-
-
     public List<InstanceHistory> getAll(String processName, UUID instanceId) {
         return context
                 .select(INSTANCE_HISTORY.fields())

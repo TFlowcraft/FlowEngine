@@ -64,38 +64,9 @@ public class ProcessNavigator {
         return resolveElementReferences(elementId, false);
     }
 
-//    public List<String> getIncomingElementsId(String elementId) {
-//        return getIncomingElements(elementId)
-//                .stream()
-//                .map(bpmnElement -> bpmnElement.getId().toLowerCase())
-//                .toList();
-//    }
-//
-//    public GatewayType getGatewayType(String gatewayId) {
-//        return getElementById(gatewayId)
-//                .map(element -> {
-//                    String type = element.getType();
-//                    if (type.contains("Exclusive")) return GatewayType.EXCLUSIVE;
-//                    if (type.contains("Parallel")) return GatewayType.PARALLEL;
-//                    return GatewayType.UNSUPPORTED;
-//                })
-//                .orElse(GatewayType.UNSUPPORTED);
-//    }
-
-    public Optional<BpmnElement> processExclusiveGateway(
-            String gatewayId,
-            Map<String, Object> processVariables
-    ) {
-        // Заглушка для реализации выбора пути
-        return getSingleOutgoingElement(gatewayId);
-    }
-
     public List<BpmnElement> processParallelGateway(String gatewayId) {
-        // Все исходящие пути для параллельного шлюза
         return getOutgoingElements(gatewayId);
     }
-
-    // Вспомогательные методы
 
     private List<BpmnElement> resolveElementReferences(String elementId, boolean isOutgoing) {
         return getElementById(elementId)
@@ -120,7 +91,4 @@ public class ProcessNavigator {
     public String getElementTypeById(String elementId) {
         return  getElementById(elementId).isPresent() ? getElementById(elementId).get().getType() : "";
     }
-
-
-
 }

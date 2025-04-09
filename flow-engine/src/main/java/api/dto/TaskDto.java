@@ -26,6 +26,16 @@ public class TaskDto {
         this.endTime = endTime;
     }
 
+    public TaskDto(UUID id, UUID instanceId, String processName, String bpmnElementId, Status status, OffsetDateTime startTime, OffsetDateTime endTime) {
+        this.id = id;
+        this.instanceId = instanceId;
+        this.processName = processName;
+        this.bpmnElementId = bpmnElementId;
+        this.status = status;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
     public String getProcessName() {
         return processName;
     }

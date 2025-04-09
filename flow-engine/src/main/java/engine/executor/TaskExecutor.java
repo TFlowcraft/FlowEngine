@@ -236,16 +236,10 @@ public class TaskExecutor {
     }
 
 
-    //Maybe create method with function interface for multiple creation with or without condition
     private void createNextTasks(InstanceTasks task, Connection connection) {
         List<BpmnElement> outgoingElements = processNavigator.getOutgoingElements(task.getBpmnElementId());
         for (var element : outgoingElements) {
             taskRepository.createTaskForInstance(task.getInstanceId(), element.getId(), connection);
-//            if (element.getType().equals("endEvent")) {
-//                processInstanceRepository.updateInstanceEndTimeIfNull(task.getInstanceId(),OffsetDateTime.now(), connection);
-//            } else {
-//
-//            }
         }
     }
 

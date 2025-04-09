@@ -1,8 +1,5 @@
 package api.dto;
 
-import com.fasterxml.jackson.annotation.JsonRawValue;
-import org.jooq.XML;
-
 import java.util.UUID;
 
 public class ProcessInfoDto {

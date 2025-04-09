@@ -23,13 +23,6 @@ public class TaskRepository  {
         this.context = context;
     }
 
-    public InstanceTasks getById(String name, UUID id) {
-        return context
-                .selectFrom(INSTANCE_TASKS)
-                .where(INSTANCE_TASKS.ID.eq(id))
-                .fetchOneInto(InstanceTasks.class);
-    }
-
     //TODO Тут надо в history stacktrace добавить, поглядеть как это сделать
     public static InstanceTasks createRetryTask(InstanceTasks task, Exception exception) {
         return new InstanceTasks(
@@ -55,34 +48,14 @@ public class TaskRepository  {
         );
     }
 
-    public int getCompletedTasksForInstance(UUID instanceId, UUID taskId, List<String> elementsId) {
-        return context
-                .select(count())
-                .from(INSTANCE_TASKS)
-                .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
-                .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
-                .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
-                .fetchOptionalInto(Integer.class)
-                .orElse(0);
-    }
 
     public boolean areAllTasksCompleted(UUID instanceId, List<String> elementsId) {
         if (elementsId.isEmpty()) {
             throw new IllegalArgumentException("Elements list cannot be empty");
         }
-
         int totalElements = elementsId.size();
         Optional<Integer> completedCount = getTaskAmountForStatus(instanceId, elementsId, Status.COMPLETED);
-
-//        Integer completedCount = context
-//                .select(count())
-//                .from(INSTANCE_TASKS)
-//                .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
-//                .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.in(elementsId))
-//                .and(INSTANCE_TASKS.STATUS.eq(Status.COMPLETED))
-//                .fetchOneInto(Integer.class);
         return completedCount.isPresent() && completedCount.get() == totalElements;
-        //return completedCount != null && completedCount == totalElements;
     }
 
     public boolean hasFailedTasks(UUID instanceId, List<String> elementsId) {
@@ -104,34 +77,16 @@ public class TaskRepository  {
 
     }
 
-
-    public List<InstanceTasks> getAll(String name) {
-        return context.selectFrom(INSTANCE_TASKS).fetchInto(InstanceTasks.class);
-    }
-
-//    public List<InstanceTasks> getAll(String processName, UUID instanceId) {
-//        return context
-//                .selectDistinct(INSTANCE_TASKS.fields())
-//                .from(INSTANCE_TASKS)
-//                .join(ProcessInstance.PROCESS_INSTANCE)
-//                .on(ProcessInstance.PROCESS_INSTANCE.ID.eq(INSTANCE_TASKS.INSTANCE_ID))
-//                .join(ProcessInfo.PROCESS_INFO)
-//                .on(ProcessInstance.PROCESS_INSTANCE.PROCESS_ID.eq(ProcessInfo.PROCESS_INFO.ID))
-//                .where(ProcessInstance.PROCESS_INSTANCE.ID.eq(instanceId))
-//                .and(ProcessInfo.PROCESS_INFO.PROCESS_NAME.eq(processName))
-//                .fetchInto(InstanceTasks.class);
-//    }
-
     public List<TaskDto> getAllTasksByInstanceId(String processName, UUID instanceId) {
         return context
                 .select(
+                        INSTANCE_TASKS.ID,
+                        INSTANCE_TASKS.INSTANCE_ID,
+                        ProcessInfo.PROCESS_INFO.PROCESS_NAME,
                         INSTANCE_TASKS.BPMN_ELEMENT_ID,
                         INSTANCE_TASKS.STATUS,
                         INSTANCE_TASKS.START_TIME,
-                        INSTANCE_TASKS.END_TIME,
-                        INSTANCE_TASKS.INSTANCE_ID,
-                        INSTANCE_TASKS.ID,
-                        ProcessInfo.PROCESS_INFO.PROCESS_NAME
+                        INSTANCE_TASKS.END_TIME
                 )
                 .from(INSTANCE_TASKS)
                 .join(ProcessInstance.PROCESS_INSTANCE)
@@ -178,18 +133,6 @@ public class TaskRepository  {
         createTaskForInstance(instanceId, elementId, null);
     }
 
-//    public void createTaskForInstance(UUID instanceId, String elementId, Connection connection) {
-//        DSLContext dsl = connection != null
-//                ? DSL.using(connection, SQLDialect.POSTGRES)
-//                : context;
-//
-//        boolean exists = checkTaskExists(instanceId, elementId, dsl);
-//
-//        if (!exists) {
-//            createNewTaskRecord(instanceId, elementId, dsl);
-//        }
-//    }
-
     public void createTaskForInstance(UUID instanceId, String elementId, Connection connection) {
         DSLContext dsl = connection != null
                 ? DSL.using(connection, SQLDialect.POSTGRES)
@@ -204,42 +147,6 @@ public class TaskRepository  {
                 .execute();
     }
 
-//    private boolean checkTaskExists(UUID instanceId, String elementId, DSLContext dsl) {
-//        return dsl.fetchExists(
-//                dsl.selectFrom(INSTANCE_TASKS)
-//                        .where(INSTANCE_TASKS.INSTANCE_ID.eq(instanceId))
-//                        .and(INSTANCE_TASKS.BPMN_ELEMENT_ID.eq(elementId))
-//        );
-//    }
-
-//    private void createNewTaskRecord(UUID instanceId, String elementId, DSLContext dsl) {
-//        InstanceTasksRecord record = dsl.newRecord(INSTANCE_TASKS);
-//        record.setInstanceId(instanceId);
-//        record.setBpmnElementId(elementId);
-//        record.setStatus(Status.PENDING);
-//        record.setCurrentRetriesAmount(0);
-//        record.store();
-//    }
-
-    public void updateTask(com.database.entity.generated.tables.pojos.InstanceTasks newTask) {
-        context.update(INSTANCE_TASKS)
-                .set(INSTANCE_TASKS.STATUS, newTask.getStatus())
-                .set(INSTANCE_TASKS.START_TIME, newTask.getStartTime())
-                .set(INSTANCE_TASKS.END_TIME, newTask.getEndTime())
-                .set(INSTANCE_TASKS.CURRENT_RETRIES_AMOUNT, newTask.getCurrentRetriesAmount())
-                .where(INSTANCE_TASKS.ID.eq(newTask.getId()))
-                .execute();
-
-    }
-
-    public void updateStartTimeIfNull(UUID taskId, OffsetDateTime newStartTime) {
-        context.update(INSTANCE_TASKS)
-                .set(INSTANCE_TASKS.START_TIME,
-                        DSL.when(INSTANCE_TASKS.START_TIME.isNull(), newStartTime)
-                                .otherwise(INSTANCE_TASKS.START_TIME))
-                .where(INSTANCE_TASKS.ID.eq(taskId))
-                .execute();
-    }
 
     public void updateTask(Connection connection, com.database.entity.generated.tables.pojos.InstanceTasks task) {
         DSLContext dsl = DSL.using(connection, SQLDialect.POSTGRES);

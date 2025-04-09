@@ -7,7 +7,6 @@ import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 
-import java.util.Objects;
 
 public class DatabaseConfig {
     public static final int DEFAULT_POOL_SIZE = 100;

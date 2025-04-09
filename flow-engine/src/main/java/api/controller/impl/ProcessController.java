@@ -19,7 +19,7 @@ public class ProcessController implements ControllerSetup {
     }
 
     public void getProcess(Context ctx) {
-        var processes = processInfoService.getAllProcessInfos();
+        var processes = processInfoService.getAllProcessesInfo();
         Response.ok(ctx, processes);
     }
 }

@@ -38,9 +38,10 @@ public class ProcessInfoRepository {
     }
 
     public List<ProcessInfoDto> getAllProcesses() {
-        return context
-                .selectFrom(PROCESS_INFO)
-                .fetchInto(ProcessInfoDto.class);
+    return context
+        .select(PROCESS_INFO.fields(PROCESS_INFO.ID, PROCESS_INFO.BPMN_PROCESS_ID, PROCESS_INFO.PROCESS_NAME))
+        .from(PROCESS_INFO)
+        .fetchInto(ProcessInfoDto.class);
     }
 
     public ProcessInfo getProcessByProcessId(UUID processId) {

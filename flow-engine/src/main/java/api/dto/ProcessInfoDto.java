@@ -9,14 +9,11 @@ public class ProcessInfoDto {
     private UUID id;
     private String bpmnProcessId;
     private String processName;
-    @JsonRawValue
-    private String bpmnScheme;
 
-    public ProcessInfoDto(UUID id, String bpmnProcessId, String processName, XML bpmnScheme) {
+    public ProcessInfoDto(UUID id, String bpmnProcessId, String processName) {
         this.id = id;
         this.bpmnProcessId = bpmnProcessId;
         this.processName = processName;
-        this.bpmnScheme = bpmnScheme.data();
     }
 
     public UUID getId() {
@@ -41,13 +38,5 @@ public class ProcessInfoDto {
 
     public void setProcessName(String processName) {
         this.processName = processName;
-    }
-
-    public String getBpmnScheme() {
-        return bpmnScheme;
-    }
-
-    public void setBpmnScheme(String bpmnScheme) {
-        this.bpmnScheme = bpmnScheme;
     }
 }

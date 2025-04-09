@@ -26,7 +26,7 @@ public class ProcessEngineTest {
       UUID processId =
           processEngine.createProcess(
               element.getId(),
-              element.getName(),
+                  element.getId().split("_")[0],
               "diagramTwoParallelGates.bpmn");
             Map<String, Object> data = new HashMap<>();
             data.put("string-name", "john");

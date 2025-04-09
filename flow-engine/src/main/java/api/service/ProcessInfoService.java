@@ -1,7 +1,6 @@
 package api.service;
 
 import api.dto.ProcessInfoDto;
-import com.database.entity.generated.tables.pojos.ProcessInfo;
 import org.jooq.XML;
 import persistence.repository.impl.ProcessInfoRepository;
 import java.util.List;
@@ -18,7 +17,7 @@ public class ProcessInfoService {
         return repository.getBpmnFileByProcessName(processName);
     }
 
-    public List<ProcessInfoDto> getAllProcessInfos() {
+    public List<ProcessInfoDto> getAllProcessesInfo() {
         return repository.getAllProcesses();
     }
 }

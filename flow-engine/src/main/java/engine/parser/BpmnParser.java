@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public final class BpmnParser {
     private static final String BPMN_MODEL_NAMESPACE = "http://www.omg.org/spec/BPMN/20100524/MODEL";
@@ -31,7 +32,9 @@ public final class BpmnParser {
         SOURCE, TARGET
     }
 
-    public static BpmnParseResult parseFile(InputStream inputStream, List<TaskDelegate> delegates)
+    public static BpmnParseResult parseFile(InputStream inputStream,
+                                            List<TaskDelegate> delegates,
+                                            Map<String, TaskDelegate> explicitMappings)
             throws ParserConfigurationException, IOException, org.xml.sax.SAXException {
 
         Map<String, BpmnElement> elementMap = new HashMap<>();
@@ -47,7 +50,7 @@ public final class BpmnParser {
         processSequenceFlows(elementsNodeList, flowMap);
         collectProcessElements(elementsNodeList, processElements);
 
-        linkDelegates(processElements, delegates, delegateMap, elementMap, flowMap);
+        linkDelegates(processElements, delegates, delegateMap, elementMap, flowMap, explicitMappings);
 
         return new BpmnParseResult(
                 Collections.unmodifiableMap(elementMap),
@@ -76,38 +79,89 @@ public final class BpmnParser {
         // !localName.toLowerCase().contains("event");
     }
 
-    private static void linkDelegates(List<Element> processElements,
-                                      List<TaskDelegate> delegates,
-                                      Map<String, TaskDelegate> delegateMap,
-                                      Map<String, BpmnElement> elementMap,
-                                      Map<String, FlowInfo> flowMap) {
-        int delegateIndex = 0;
-        int taskCount = 0;
-
-        for (Element element : processElements) {
-            if (isTaskElement(element)) {
-                taskCount++;
-            }
-        }
-
-        if (taskCount != delegates.size()) {
-            throw new IllegalStateException("Количество делегатов (" + delegates.size() +
-                    ") не соответствует количеству задач в BPMN (" + taskCount + ")");
-        }
-
+    private static void linkDelegates(
+            List<Element> processElements,
+            List<TaskDelegate> delegates,
+            Map<String, TaskDelegate> delegateMap,
+            Map<String, BpmnElement> elementMap,
+            Map<String, FlowInfo> flowMap,
+            Map<String, TaskDelegate> explicitMappings
+    ) {
+        // 1. Собираем ВСЕ элементы BPMN
         for (Element element : processElements) {
             String id = element.getAttribute("id");
-            if (id.isEmpty()) continue;
-
-            BpmnElement bpmnElement = createBpmnElement(element, flowMap);
-            elementMap.put(id, bpmnElement);
-
-            if (isTaskElement(element)) {
-                delegateMap.put(id, delegates.get(delegateIndex));
-                delegateIndex++;
+            if (!id.isEmpty()) {
+                BpmnElement bpmnElement = createBpmnElement(element, flowMap);
+                elementMap.put(id, bpmnElement);
             }
         }
+
+        // 2. Собираем только задачи для связывания делегатов
+        List<String> taskIds = processElements.stream()
+                .filter(BpmnParser::isTaskElement)
+                .map(e -> e.getAttribute("id"))
+                .collect(Collectors.toList());
+
+        // 3. Обрабатываем явные привязки
+        explicitMappings.forEach((bpmnId, delegate) -> {
+            if (!elementMap.containsKey(bpmnId)) {
+                throw new IllegalStateException("Элемент BPMN с ID '" + bpmnId + "' не найден");
+            }
+            delegateMap.put(bpmnId, delegate);
+            taskIds.remove(bpmnId);
+        });
+
+        // 4. Проверяем количество делегатов
+        int requiredDelegates = taskIds.size();
+        int availableDelegates = delegates.size() - explicitMappings.size();
+
+        if (availableDelegates < requiredDelegates) {
+            throw new IllegalStateException(
+                    "Недостаточно делегатов. Требуется: " + requiredDelegates +
+                            ", Доступно: " + availableDelegates
+            );
+        }
+
+        // 5. Автоматическое связывание по порядку
+        int delegateIndex = explicitMappings.size();
+        for (String taskId : taskIds) {
+            delegateMap.put(taskId, delegates.get(delegateIndex++));
+        }
     }
+//    private static void linkDelegates(List<Element> processElements,
+//                                      List<TaskDelegate> delegates,
+//                                      Map<String, TaskDelegate> delegateMap,
+//                                      Map<String, BpmnElement> elementMap,
+//                                      Map<String, FlowInfo> flowMap) {
+//        int delegateIndex = 0;
+//        int taskCount = 0;
+//
+//        for (Element element : processElements) {
+//            if (isTaskElement(element)) {
+//                taskCount++;
+//            }
+//        }
+//
+//        if (taskCount != delegates.size()) {
+//            throw new IllegalStateException("Количество делегатов (" + delegates.size() +
+//                    ") не соответствует количеству задач в BPMN (" + taskCount + ")");
+//        }
+//
+//        for (Element element : processElements) {
+//            String id = element.getAttribute("id");
+//            if (id.isEmpty()) continue;
+//
+//            BpmnElement bpmnElement = createBpmnElement(element, flowMap);
+//            elementMap.put(id, bpmnElement);
+//
+//            if (isTaskElement(element)) {
+//                delegateMap.put(id, delegates.get(delegateIndex));
+//                delegateIndex++;
+//            }
+//        }
+//    }
+
+
 
     private static boolean isTaskElement(Element element) {
         String localName = element.getLocalName().toLowerCase();

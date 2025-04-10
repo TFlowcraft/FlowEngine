@@ -87,7 +87,6 @@ public class ProcessEngine {
         }
     }
 
-
     public ProcessNavigator getProcessNavigator() {
         return processNavigator;
     }
@@ -127,6 +126,7 @@ public class ProcessEngine {
         private long idleTimeoutMs;
         private long maxLifetimeMs;
         private boolean defaultHikariSettings = true;
+        private Map<String, TaskDelegate> explicitMappings;
 
         public ProcessEngineConfigurator setBpmnProcessFile(String bpmnFile) {
             inputStream = getClass().getResourceAsStream(bpmnFile);
@@ -164,8 +164,8 @@ public class ProcessEngine {
             return this;
         }
 
-        public ProcessEngineConfigurator setPoolSize(int size) {
-            poolSize = size;
+        public ProcessEngineConfigurator setExplicitMappings(Map<String, TaskDelegate> explicitMappings) {
+            this.explicitMappings = explicitMappings;
             return this;
         }
 
@@ -236,7 +236,7 @@ public class ProcessEngine {
             validate();
             initDbConfig();
             DSLContext context = DatabaseConfig.getContext();
-            var parserResult = BpmnParser.parseFile(inputStream, userTaskImplementation);
+            var parserResult = BpmnParser.parseFile(inputStream, userTaskImplementation, explicitMappings == null ? Collections.emptyMap() : explicitMappings);
             BlockingQueue<InstanceTasks> engineQueue = new ArrayBlockingQueue<>(processTaskAmount);
             TaskRepository taskRepository = new TaskRepository(context);
             ProcessInstanceRepository processInstanceRepository = new ProcessInstanceRepository(context);

@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 class BpmnParserTest {
     private Map<String, BpmnElement> parsedElements;
@@ -30,15 +31,16 @@ class BpmnParserTest {
                 });
             }
 
-            var result = BpmnParser.parseFile(getClass().getResourceAsStream(path), list);
+      var result =
+          BpmnParser.parseFile(getClass().getResourceAsStream(path), list, Collections.emptyMap());
             var delegates = result.elements();
             ProcessNavigator navigator = new ProcessNavigator(delegates);
             var in = navigator.getIncomingElementsId("Gateway_1lf99ds");
             for (var element : in) {
                 System.out.println("Elem: " + element);
             }
-            //delegates.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
-//            List<BpmnElement> values = scheme.values().stream().toList();
+            delegates.forEach((id, element) -> System.out.println("ID: " + id + ", Element: " + element));
+          //  List<BpmnElement> values = scheme.values().stream().toList();
 //            for (BpmnElement bpmnElement : values) {
 //                System.out.println(bpmnElement.toString());
 //            }

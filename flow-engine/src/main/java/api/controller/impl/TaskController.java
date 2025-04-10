@@ -9,7 +9,7 @@ import io.javalin.http.Context;
 import java.util.UUID;
 
 public class TaskController implements ControllerSetup {
-    TaskService taskService;
+    private final TaskService taskService;
 
     public TaskController(TaskService taskService) {
         this.taskService = taskService;

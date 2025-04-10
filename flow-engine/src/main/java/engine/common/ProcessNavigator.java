@@ -12,7 +12,6 @@ public class ProcessNavigator {
         this.elements = Collections.unmodifiableMap(elements);
     }
 
-
     public List<BpmnElement> getOutgoingElements(String elementId) {
         return resolveElementReferences(elementId, true);
     }
